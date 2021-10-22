@@ -699,6 +699,7 @@ sequence."
      (cl-check-type quick-command symbol)
      (cl-check-type quick-map keymap)
      (cl-assert quick-map t)
+     (cl-check-type keys-commands list)
      ,@(cl-loop for (key . command) in keys-commands
                 collect (progn
                           (cl-check-type key string)
