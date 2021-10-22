@@ -702,7 +702,6 @@ sequence."
      (cl-check-type keys-commands list)
      ,@(cl-loop for (key . command) in keys-commands
                 collect (progn
-                          (cl-check-type key string)
                           (cl-check-type command symbol)
                           `(define-key quick-map ,key (quote ,command))))
      quick-command))
