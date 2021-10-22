@@ -673,7 +673,7 @@ sequence."
       (call-interactively command t (vconcat (this-command-keys) key-sequence))
       )))
 
-(defmacro beyond-def-quick-key-command (name timeout base-command &optional quick-map)
+(cl-defmacro beyond-def-quick-key-command (name timeout base-command &optional quick-map)
   (interactive)
   (cl-check-type name symbol)
   (cl-check-type timeout number)
@@ -691,7 +691,7 @@ sequence."
                (beyond-timeout-keypress ,base-command quick-map ,timeout "Continue command %S?" ,base-command))
              #',name))))
 
-(defmacro beyond-def-quick-key-command-with-keys (name timeout base-command &optional quick-map &rest keys-commands)
+(cl-defmacro beyond-def-quick-key-command-with-keys (name timeout base-command &optional quick-map &rest keys-commands)
   (interactive)
   (cl-check-type quick-map (or null symbol))
   `(let* ((quick-command (beyond-def-quick-key-command ,name ,timeout ,base-command ,quick-map))
