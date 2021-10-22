@@ -854,11 +854,11 @@ region further.")
               (";" . pointless-jump-word-beginning)
               (,beginning-of-line-key . ,(beyond-def-quick-key-command-with-keys beyond-pointless-jump-beginning-of-line
                                                                                  0.15 'pointless-jump-beginning-of-line
-                                                                                 nil (,beginning-of-line-key . beginning-of-line)))
+                                                                                 nil (beginning-of-line-key . beginning-of-line)))
               ("U" . back-to-indentation)
               (,end-of-line-key . ,(beyond-def-quick-key-command-with-keys beyond-pointless-jump-end-of-line
                                                                            0.15 'pointless-jump-end-of-line
-                                                                           nil (,end-of-line-key . end-of-line)))
+                                                                           nil (end-of-line-key . end-of-line)))
               ("'" . pointless-jump-sexp)
               ("n" . ,(beyond-def-quick-key-command-with-keys beyond-pointless-jump-mark-quick
                                                               0.15 'pointless-jump-mark
