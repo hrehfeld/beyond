@@ -686,10 +686,10 @@ sequence."
     `(progn
        ,@new-map-def
        (let ((quick-map ,quick-map))
-             (defun ,name ()
-               (interactive)
-               (beyond-timeout-keypress ,base-command quick-map ,timeout "Continue command %S?" ,base-command))
-             #',name))))
+         (defun ,name ()
+           (interactive)
+           (beyond-timeout-keypress ,base-command quick-map ,timeout "Continue command %S?" ,base-command))
+         #',name))))
 
 (cl-defmacro beyond-def-quick-key-command-with-keys (name timeout base-command &optional quick-map &rest keys-commands)
   (interactive)
@@ -723,7 +723,7 @@ sequence."
           (prog1
               (kill-line)
             (message "killed line"))
-            ;; kill ws first
+        ;; kill ws first
         (cycle-spacing)))))
 
 
