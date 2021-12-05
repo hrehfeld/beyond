@@ -921,52 +921,42 @@ region further.")
 
 
 
-(let ((end-of-line-key "p")
-      (beginning-of-line-key "u")
-      (jump-marker-key "n"))
-  (setq beyond-easy-bindings
-        `((beyond-command-state-map
-           . (("d" . beyond-kill-region-or-line)
-              ("y" . yank)
-              ("e" . er/expand-region)
-              ("w" . beyond-mark-text-units)
-              ("x" . ,ctl-x-map)
-              ("<SPC> <SPC>" . set-mark-command)
-              ("r" . beyond-toggle-mark)
-              ;; see later smartrep definition
-              ("/" . undo)
-              ("<SPC> z" . ,(beyond-def-key-repeater "z" undo-tree-redo))
-              ("<backspace>" . delete-backward-char)
-              ("a" . embark-act)
-              ;;editing
-              ))
-          (beyond-special-state-map
-           . (("x" . ,ctl-x-map)))
-          (beyond-motion-state-map
-           ;; should only be right-handed
-           . (
-              ("c" . beyond--read-key-sequence-control-swapped)
-              ("\\" . beyond-quote-keypress)
-              (,beginning-of-line-key . ,(taps-def-taps pointless-jump-beginning-of-line
-                                                        ((beginning-of-line-key . beyond-back-to-indentation-or-beginning-of-line))
-                                                        ))
-              (,end-of-line-key . ,(taps-def-taps pointless-jump-end-of-line
-                                                  ((end-of-line-key . end-of-line))
-                                                  ))
-              ("'" . pointless-jump-sexp)
-              (,jump-marker-key . ,(taps-def-taps pointless-jump-mark
-                                                  (("n" . exchange-point-and-mark))))
-              ("." . xref-find-definitions-other-window)
-              ("i" . scroll-down-command)
-              ("o" . scroll-up-command)
-              ("O" . scroll-other-window)
-              ("I" . scroll-other-window-down)
-              ("k" . backward-char)
-              ("l" . forward-char)
-              ("h" . isearch-forward)
+(setq beyond-easy-bindings
+      `((beyond-command-state-map
+         . (("d" . beyond-kill-region-or-line)
+            ("y" . yank)
+            ("e" . er/expand-region)
+            ("w" . beyond-mark-text-units)
+            ("x" . ,ctl-x-map)
+            ("<SPC> <SPC>" . set-mark-command)
+            ("r" . beyond-toggle-mark)
+            ;; see later smartrep definition
+            ("/" . undo)
+            ("<SPC> z" . ,(beyond-def-key-repeater "z" undo-tree-redo))
+            ("<backspace>" . delete-backward-char)
+            ("a" . embark-act)
+            ;;editing
+            ))
+        (beyond-special-state-map
+         . (("x" . ,ctl-x-map)))
+        (beyond-motion-state-map
+         ;; should only be right-handed
+         . (
+            ("c" . beyond--read-key-sequence-control-swapped)
+            ("\\" . beyond-quote-keypress)
+            ("'" . pointless-jump-sexp)
+            (,jump-marker-key . ,(taps-def-taps pointless-jump-mark
+                                                (("n" . exchange-point-and-mark))))
+            ("." . xref-find-definitions-other-window)
+            ("i" . scroll-down-command)
+            ("o" . scroll-up-command)
+            ("O" . scroll-other-window)
+            ("I" . scroll-other-window-down)
+            ("k" . backward-char)
+            ("l" . forward-char)
+            ("h" . isearch-forward)
 
-              ))))
-  )
+            ))))
 
 ;;(unbind-key "j" beyond-command-state-map )
 
@@ -984,10 +974,11 @@ region further.")
                         (unbind-key (kbd key) map))))))
 (beyond-easy-bind)
 
-(taps-def-double-tap-key beyond-motion-state-map "j" pointless-jump-char-timeout beyond-back-to-indentation-or-beginning-of-line)
-(taps-def-double-tap-key beyond-motion-state-map ";" pointless-jump-word-beginning end-of-line)
-(taps-def-double-tap-key beyond-motion-state-map "u" pointless-jump-beginning-of-line beyond-previous-line)
-(taps-def-double-tap-key beyond-motion-state-map "p" pointless-jump-end-of-line beyond-next-line)
+(taps-def-double-tap-key beyond-motion-state-map "j" pointless-jump-char-timeout beyond-previous-line)
+(taps-def-double-tap-key beyond-motion-state-map ";" pointless-jump-word-beginning beyond-next-line)
+(taps-def-double-tap-key beyond-motion-state-map "u" pointless-jump-beginning-of-line beyond-back-to-indentation-or-beginning-of-line)
+(taps-def-double-tap-key beyond-motion-state-map "p" pointless-jump-end-of-line end-of-line)
+(taps-def-double-tap-key beyond-motion-state-map "n" pointless-jump-mark exchange-point-and-mark)
 
 (taps-def-double-tap-key beyond-command-state-map "m" newline open-line)
 
