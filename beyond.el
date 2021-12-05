@@ -645,13 +645,16 @@ sequence."
      (t (user-error "Key not bound to a command: %s" binding)))))
 
 
+(defvar taps-timeout-default 0.15 "Default timeout for `taps-timeout-keypress' when not overriding specifically.")
 
-(defun beyond-timeout-keypress (command alternative-command-keymap timeout prompt &rest format-args)
+(defun taps-timeout-keypress (command alternative-command-keymap timeout prompt &rest format-args)
   "Execute `COMMAND' if no further keysequence found in `ALTERNATIVE-COMMAND-KEYMAP' is pressed within `TIMEOUT' seconds. Otherwise execute command found there.
 
 `PROMPT' will be used as the prompt after `format-args' are applied to it using `format'."
   (let ((prompt (apply #'format prompt format-args))
+        (timeout (or timeout 0.15))
         cancelled)
+    (cl-check-type timeout number)
     (let* ((idle-timer (run-with-timer timeout nil (lambda () (setq cancelled t))))
            key-sequence
            (command
@@ -673,41 +676,117 @@ sequence."
       (call-interactively command t (vconcat (this-command-keys) key-sequence))
       )))
 
-(cl-defmacro beyond-def-quick-key-command (name timeout base-command &optional quick-map)
+(defun taps--command-name (base-command)
+  (cl-check-type base-command symbol)
+  (concat "taps--command--" (symbol-name base-command)))
+(defun taps--map-name (base-command)
+  (cl-check-type base-command symbol)
+  (concat (taps--command-name base-command) "-map"))
+
+(defun taps--command-sym (base-command)
+  (intern (taps--command-name base-command)))
+(defun taps--map-sym (base-command)
+  (intern (taps--map-name base-command)))
+
+(defun taps--command (base-command command-name timeout tap-map)
   (interactive)
-  (cl-check-type name symbol)
-  (cl-check-type timeout number)
-  (cl-check-type quick-map (or null symbol))
-  (let* ((new-map-sym (intern (concat (symbol-name name) "-map")))
-         (new-map-def (unless quick-map
-                        `((defvar ,new-map-sym (make-sparse-keymap)))))
-         (quick-map (or quick-map new-map-sym)))
-    (cl-check-type quick-map symbol)
+  (cl-check-type command-name symbol)
+  (cl-check-type tap-map symbol)
+  `(defun ,command-name ()
+     (interactive)
+     (taps-timeout-keypress (quote,base-command) ,tap-map ,timeout ,(format "Continue command %S?" base-command))))
+
+(defun taps--map (map-sym command-sym)
+  (interactive)
+  (cl-check-type command-sym symbol)
+  (cl-check-type map-sym symbol)
+  `(defvar ,map-sym (make-sparse-keymap) ,(format "Double-tap keymap for `%s'." (symbol-name command-sym))))
+
+(cl-defmacro taps-def-taps (base-command keys-commands &key command-name timeout tap-map base-map base-key)
+  "TODO
+Each `command' in `keys-commands' can be a function symbol, a lambda expression or a form, which will be wrapped in a lambda expression."
+  (interactive)
+  (cl-check-type base-command symbol)
+  (cl-check-type command-name (or null symbol))
+  (cl-check-type tap-map (or null symbol))
+  (cl-check-type keys-commands list)
+  (let* ((command-name (or command-name (taps--command-sym base-command)))
+         (has-tap-map? tap-map)
+         (tap-map (or tap-map (taps--map-sym base-command)))
+         (tap-map-def (unless has-tap-map? (taps--map tap-map command-name)))
+         (tap-command (taps--command base-command command-name timeout tap-map))
+         (command-sym (gensym "taps--command-"))
+         (bind (when (and base-map base-key)
+                 `(define-key ,base-map ,base-key ,command-sym)))
+         )
     `(progn
-       ,@new-map-def
-       (let ((quick-map ,quick-map))
-         (defun ,name ()
-           (interactive)
-           (beyond-timeout-keypress ,base-command quick-map ,timeout "Continue command %S?" ,base-command))
-         #',name))))
+       ,tap-map-def
+       ,@(cl-loop for (key . command) in keys-commands
+                  collect (progn
+                            (cl-check-type command (or list symbol))
+                            (cl-assert command)
+                            (let ((command (if (symbolp command)
+                                               command
+                                             (cond ((eq (car command) 'lambda) command)
+                                                   (t `(lambda () (interactive) ,command)))
+                                             )))
+                              `(define-key ,tap-map ,key (quote ,command)))))
+       (let ((,command-sym ,tap-command))
+         ,bind
+         ;;just return the command
+         ,command-sym))))
 
-(cl-defmacro beyond-def-quick-key-command-with-keys (name timeout base-command &optional quick-map &rest keys-commands)
+(cl-defmacro taps-def-double-tap-key (base-map key base-command double-tap-command &key command-name timeout tap-map)
+  "TODO"
   (interactive)
-  (cl-check-type quick-map (or null symbol))
-  `(let* ((quick-command (beyond-def-quick-key-command ,name ,timeout ,base-command ,quick-map))
-          (quick-map (symbol-value ,(or quick-map '(intern (concat (symbol-name quick-command) "-map"))))))
-     (cl-check-type quick-command symbol)
-     (cl-check-type quick-map keymap)
-     (cl-assert quick-map t)
-     (cl-check-type keys-commands list)
-     ,@(cl-loop for (key . command) in keys-commands
-                collect (progn
-                          (cl-check-type command symbol)
-                          `(define-key quick-map ,key (quote ,command))))
-     quick-command))
-;; (macroexpand-1 '(beyond-def-quick-key-command-with-keys beyond-pointless-jump-mark-quick 0.5 'pointless-jump-mark nil ("m" . exchange-point-and-mark)))
-;;(beyond-def-quick-key-command-with-keys beyond-pointless-jump-mark-quick 0.5 'pointless-jump-mark nil ("m" . exchange-point-and-mark))
+  (list #'taps-def-taps base-command (list (cons key double-tap-command))
+        :command-name command-name :timeout timeout :tap-map tap-map
+        :base-map base-map :base-key key
+        ))
 
+;;(macroexpand-1 '(taps--command pointless-jump-mark beyond-def-quick-key-command--pointless-jump-mark 0.5 beyond-def-quick-key-command--pointless-jump-mark-map))
+;; (macroexpand '(taps-def-tap pointless-jump-mark :name beyond-def-quick-key-command--pointless-jump-mark :timeout 0.5 :tap-map nil))
+;; (macroexpand '(taps-def-taps pointless-jump-mark (("m" . exchange-point-and-mark)) :timeout 0.5 :base-map beyond-command-state :base-key "n"))
+;;(taps-def-taps pointless-jump-mark (("m" . exchange-point-and-mark)) :timeout 0.5)
+
+(defmacro beyond-def-taps-key (map key base-command double-tap-command &optional timeout)
+  (let* ((double-tap-map (taps--map-name base-command))
+         (keys (listify-key-sequence key))
+         (key (car (last keys)))
+         )
+    `(let ((command (taps-def-taps base-command (,key . ,double-tap-command) :timeout ,timeout))
+           (define-key ,(intern double-tap-map) command)
+           (define-key ,map command)))))
+
+;;(macroexpand-1 '(beyond-def-double-tap-key 'beyond-command-state-map "k" foo bar))
+
+
+;; motion commands
+
+(defun beyond-call-interactively-with-last-command (command)
+  "Call `command' interactively, but set `last-command' to `command' if `last-command' is `this-command'.
+
+The main use of this is where the called function checks if it is
+called several times in succession and modifies behavior then.
+`next-line''s handling of `temporary-goal-column' is an obvious
+example."
+  (let ((last-command (if (eq last-command this-command) command last-command)))
+    (call-interactively command)
+    ))
+
+(defun beyond-next-line ()
+  "Like `next-line', but sets `last-command' to `next-line', so `temporary-goal-column' behavior is correct.
+
+`last-command' is checked by `line-move'."
+  (interactive)
+  (beyond-call-interactively-with-last-command #'next-line))
+
+(defun beyond-previous-line ()
+  "Like `previous-line', but sets `last-command' to `previous-line', so `temporary-goal-column' behavior is correct.
+
+`last-command' is checked by `line-move'."
+  (interactive)
+  (beyond-call-interactively-with-last-command #'previous-line))
 
 
 
@@ -807,7 +886,23 @@ region further.")
   )
 
 
-(define-key beyond-command-state-map (kbd "v") #'beyond-enter-insertion-state)
+(defun beyond-move-first-moving (point &rest move-funs)
+  (interactive "d")
+  ;; TODO: make this generate all movement points, check if on any of them, and then go to the next
+  (while (and move-funs (= (point) point))
+    (message "point %S (point) %S -- %S" point (point) (car move-funs))
+    (funcall (car move-funs))
+    (setq move-funs (cdr move-funs)))
+  )
+
+(defun beyond-back-to-indentation-or-beginning-of-line (point)
+  (interactive "d")
+  (beyond-move-first-moving point
+                            #'back-to-indentation
+                            #'beginning-of-line))
+
+
+(define-key beyond-command-state-map (kbd "f") #'beyond-enter-insertion-state)
 (define-key beyond-insertion-state-map (kbd "C-g") #'beyond-exit-insertion-state)
 (define-key beyond-insertion-state-map (kbd "<escape>") #'beyond-exit-insertion-state)
 
@@ -822,12 +917,15 @@ region further.")
 (add-hook 'beyond-insertion-state-enter-hook #'beyond-kill-non-bol-trailing-whitespace)
 ;;(remove-hook 'beyond-insertion-state-enter-hook #'beyond-kill-non-bol-trailing-whitespace)
 
+(defvar beyond-easy-bindings nil)
+
+
+
 (let ((end-of-line-key "p")
-      (beginning-of-line-key "u"))
-  (mapc (lambda (map-binding-list)
-          (mapc (lambda (e) (define-key (car map-binding-list) (kbd (car e)) (cdr e)))
-                (cdr map-binding-list)))
-        `((,beyond-command-state-map
+      (beginning-of-line-key "u")
+      (jump-marker-key "n"))
+  (setq beyond-easy-bindings
+        `((beyond-command-state-map
            . (("d" . beyond-kill-region-or-line)
               ("y" . yank)
               ("e" . er/expand-region)
@@ -841,28 +939,23 @@ region further.")
               ("<backspace>" . delete-backward-char)
               ("a" . embark-act)
               ;;editing
-              ("m" . newline)
               ))
-          (,beyond-special-state-map
+          (beyond-special-state-map
            . (("x" . ,ctl-x-map)))
-          (,beyond-motion-state-map
+          (beyond-motion-state-map
            ;; should only be right-handed
            . (
               ("c" . beyond--read-key-sequence-control-swapped)
               ("\\" . beyond-quote-keypress)
-              ("j" . pointless-jump-char-timeout)
-              (";" . pointless-jump-word-beginning)
-              (,beginning-of-line-key . ,(beyond-def-quick-key-command-with-keys beyond-pointless-jump-beginning-of-line
-                                                                                 0.15 'pointless-jump-beginning-of-line
-                                                                                 nil (beginning-of-line-key . beginning-of-line)))
-              ("U" . back-to-indentation)
-              (,end-of-line-key . ,(beyond-def-quick-key-command-with-keys beyond-pointless-jump-end-of-line
-                                                                           0.15 'pointless-jump-end-of-line
-                                                                           nil (end-of-line-key . end-of-line)))
+              (,beginning-of-line-key . ,(taps-def-taps pointless-jump-beginning-of-line
+                                                        ((beginning-of-line-key . beyond-back-to-indentation-or-beginning-of-line))
+                                                        ))
+              (,end-of-line-key . ,(taps-def-taps pointless-jump-end-of-line
+                                                  ((end-of-line-key . end-of-line))
+                                                  ))
               ("'" . pointless-jump-sexp)
-              ("n" . ,(beyond-def-quick-key-command-with-keys beyond-pointless-jump-mark-quick
-                                                              0.15 'pointless-jump-mark
-                                                              nil ("m" . exchange-point-and-mark)))
+              (,jump-marker-key . ,(taps-def-taps pointless-jump-mark
+                                                  (("n" . exchange-point-and-mark))))
               ("." . xref-find-definitions-other-window)
               ("i" . scroll-down-command)
               ("o" . scroll-up-command)
@@ -872,7 +965,32 @@ region further.")
               ("l" . forward-char)
               ("h" . isearch-forward)
 
-              )))))
+              ))))
+  )
+
+;;(unbind-key "j" beyond-command-state-map )
+
+(defun beyond-easy-bind ()
+  (interactive)
+  (cl-loop for (map . bindings) in beyond-easy-bindings
+           do
+           (cl-loop for (key . command) in bindings
+                    do
+                    (let ((map (if (keymapp map) map (symbol-value map))))
+                      (if command
+                          (define-key map (kbd key) command)
+                        ;; handle nil as command as an unbind, because (define-key ... nil) doesn't
+                        ;; work for some reason
+                        (unbind-key (kbd key) map))))))
+(beyond-easy-bind)
+
+(taps-def-double-tap-key beyond-motion-state-map "j" pointless-jump-char-timeout beyond-back-to-indentation-or-beginning-of-line)
+(taps-def-double-tap-key beyond-motion-state-map ";" pointless-jump-word-beginning end-of-line)
+(taps-def-double-tap-key beyond-motion-state-map "u" pointless-jump-beginning-of-line beyond-previous-line)
+(taps-def-double-tap-key beyond-motion-state-map "p" pointless-jump-end-of-line beyond-next-line)
+
+(taps-def-double-tap-key beyond-command-state-map "m" newline open-line)
+
 
 
 ;; make insert mode automatically stop after idle time
