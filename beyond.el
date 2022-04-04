@@ -405,7 +405,8 @@ See `set-cursor-color'."
     notmuch-tree-mode
     org-agenda-mode
     pass-mode
-    view-mode)
+    view-mode
+    vterm-mode)
     "A List of modes which should use `beyond-special-state'."
     :group 'beyond
     :type '(repeat symbol))
