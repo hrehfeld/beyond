@@ -665,6 +665,7 @@ sequence."
              (cl-loop with event = nil
                       with command = nil
                       while (not cancelled)
+                      ;; TODO: use read-key for non-char key events?
                       do (setq event (read-event prompt t 0.05))
                       if event
                       do (progn
