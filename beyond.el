@@ -1028,18 +1028,17 @@ region further.")
 
 ;;(add-to-list 'pointless-keysets-alist (cons 'pointless-jump-mark (car pointless-jump-keysets)))
 
-(eval-after-load 'org-mode
-  (progn
-    (beyond-def-state beyond-org-mode-command-state "Beyond command state for `org-mode' buffers" "CMD" beyond-command-state)
-    (pp (macroexpand-1 '(beyond-def-state beyond-org-mode-command-state "Beyond command state for `org-mode' buffers" "CMD" beyond-command-state)))
-    (add-to-list 'beyond-major-mode-states '(org-mode . beyond-org-mode-command-state))
+(with-eval-after-load 'org
+  (beyond-def-state beyond-org-mode-command-state "Beyond command state for `org-mode' buffers" "oCMD" beyond-command-state)
+  ;;(pp (macroexpand-1 '(beyond-def-state beyond-org-mode-command-state "Beyond command state for `org-mode' buffers" "CMD" beyond-command-state)))
+  (add-to-list 'beyond-major-mode-states '(org-mode . beyond-org-mode-command-state))
 
-    (defvar beyond-org-mode-command-state-leader-key "<SPC>"
-      "Prefix key for `beyond-org-mode-command-state.'")
-    ;; (let ((leader (concat beyond-org-mode-command-state-leader-key " ")))
-    ;;   (cl-loop for (key . command) in `((,(concat leader "j") . pointless-jump-org-headline))
-    ;;            do (define-key beyond-org-mode-command-state-map (kbd key) command)))
-    ))
+  (beyond-def-state beyond-org-agenda-mode-command-state "Beyond command state for `org-agenda-mode' buffers" "oaCMD" beyond-command-state)
+  ;;(pp (macroexpand-1 '(beyond-def-state beyond-org-agenda-mode-command-state "Beyond command state for `org-agenda-mode' buffers" "CMD" beyond-command-state)))
+  (add-to-list 'beyond-major-mode-states '(org-agenda-mode . beyond-org-agenda-mode-command-state))
+
+  (defvar beyond-org-mode-command-state-leader-key "<SPC>"
+    "Prefix key for `beyond-org-mode-command-state.'"))
 
 (provide 'beyond)
 ;;; beyond ends here
