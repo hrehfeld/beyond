@@ -924,6 +924,11 @@ region further.")
 
 
 
+(defun beyond-undo () (interactive)
+       (let* ((prefix current-prefix-arg)
+              (current-prefix-arg (list (if (use-region-p) 4 prefix))))
+         (call-interactively #'undo-tree-undo)))
+
 (setq beyond-easy-bindings
       `((beyond-command-state-map
          . (("d" . beyond-kill-region-or-line)
@@ -934,7 +939,7 @@ region further.")
             ("<SPC> <SPC>" . set-mark-command)
             ("r" . beyond-toggle-mark)
             ;; see later smartrep definition
-            ("/" . undo)
+            ("/" . beyond-undo)
             ("<SPC> z" . ,(beyond-def-key-repeater "z" undo-tree-redo))
             ("<backspace>" . delete-backward-char)
             ("a" . embark-act)
