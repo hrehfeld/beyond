@@ -953,8 +953,6 @@ region further.")
             ("c" . beyond--read-key-sequence-control-swapped)
             ("\\" . beyond-quote-keypress)
             ("'" . pointless-jump-sexp)
-            (,jump-marker-key . ,(taps-def-taps pointless-jump-mark
-                                                (("n" . exchange-point-and-mark))))
             ("." . xref-find-definitions-other-window)
             ("i" . scroll-down-command)
             ("o" . scroll-up-command)
