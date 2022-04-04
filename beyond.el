@@ -264,7 +264,7 @@ Functions are called with the state symbol as the only argument" state-name))
 
 (defvar beyond-motion-state-map
   (let ((map (make-sparse-keymap)))
-    (set-keymap-parent map special-mode-map)
+    (suppress-keymap map)
     map)
   "Base keymap that saves motion commands. Other special state maps inherit from this.")
 ;; (pp (macroexpand-1 '(beyond-def-state beyond-command-state "Beyond command mode where keys aren't self-inserting but run commands." "CMD" nil beyond-motion-state-map)))
