@@ -441,9 +441,9 @@ that condition triggers."
   :group 'beyond :type '(repeat symbol))
 
 (defcustom beyond-major-mode-states
-  '((message-mode . beyond-insert-state)
+  '((message-mode . beyond-insertion-state)
     (org-agenda-mode . beyond-special-state)
-    (vterm-mode . beyond-insert-state))
+    (vterm-mode . beyond-insertion-state)
   "A alist of `(MAJOR-MODE . BEYOND-STATE)' to trigger a specific state for that major mode."
   :group 'beyond :type '(list symbol))
 
