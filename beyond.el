@@ -961,53 +961,62 @@ region further.")
 
 (setq beyond-easy-bindings
       `((beyond-command-state-map
-         . (("d" . beyond-kill-region-or-line)
-            ("y" . yank)
-            ("e" . er/expand-region)
-            ("w" . beyond-mark-text-units)
-            ("x" . ,ctl-x-map)
-            ("<SPC> <SPC>" . set-mark-command)
-            ("r" . beyond-toggle-mark)
-            ;; see later smartrep definition
-            ("/" . beyond-undo)
-            ("<SPC> z" . ,(beyond-def-key-repeater "z" undo-tree-redo))
-            ("<backspace>" . delete-backward-char)
-            ("a" . embark-act)
+         . (("d" beyond-kill-region-or-line "a")
+            ("y" yank "a")
+            ("e" er/expand-region "a")
+            ("w" beyond-mark-text-units "a")
+            ("x" ,ctl-x-map "a")
+            ;;("<SPC> <SPC>" set-mark-command "a")
+            ("r" beyond-toggle-mark "a")
+            ;; see later artrep "a" definition
+            ("/" beyond-undo "a")
+            ;;("<SPC> z" ,(beyond-def-key-repeater "z" undo-tree-redo) "a")
+            ("<SPC>" beyond-next-state "a")
+            ("<backspace>" delete-backward-char "a")
+            ("a" embark-act "a")
             ;;editing
             ))
         (beyond-special-state-map
-         . (("x" . ,ctl-x-map)))
+         . (("x" ,ctl-x-map "C-x")))
         (beyond-motion-state-map
          ;; should only be right-handed
          . (
-            ("c" . beyond--read-key-sequence-control-swapped)
-            ("\\" . beyond-quote-keypress)
-            ("'" . pointless-jump-sexp)
-            ("." . xref-find-definitions-other-window)
-            ("i" . scroll-down-command)
-            ("o" . scroll-up-command)
-            ("O" . scroll-other-window)
-            ("I" . scroll-other-window-down)
-            ("k" . backward-char)
-            ("l" . forward-char)
-            ("h" . isearch-forward)
-
+            ("c" beyond--read-key-sequence-control-swapped "a")
+            ("\\" beyond-quote-keypress "a")
+            ("'" pointless-jump-sexp "a")
+            ("." xref-find-definitions-other-window "a")
+            ("i" scroll-down-command "a")
+            ("o" scroll-up-command "a")
+            ("O" scroll-other-window "a")
+            ("I" scroll-other-window-down "a")
+            ("k" backward-char "a")
+            ("l" forward-char "a")
+            ("h" isearch-forward "a")
             ))))
 
 ;;(unbind-key "j" beyond-command-state-map )
 
-(defun beyond-easy-bind ()
+(defun beyond-easy-bind (&optional bindings)
   (interactive)
-  (cl-loop for (map . bindings) in beyond-easy-bindings
-           do
-           (cl-loop for (key . command) in bindings
-                    do
-                    (let ((map (if (keymapp map) map (symbol-value map))))
-                      (if command
-                          (define-key map (kbd key) command)
-                        ;; handle nil as command as an unbind, because (define-key ... nil) doesn't
-                        ;; work for some reason
-                        (unbind-key (kbd key) map))))))
+  (let ((bindings (or bindings beyond-easy-bindings)))
+    (cl-loop for (map . bindings) in bindings
+             do
+             (let ((map (if (keymapp map) map (symbol-value map))))
+               (cl-loop for (key command desc) in bindings
+                        do
+                        (progn
+                          (if command
+                              (let* ((command (cond ((keymapp command) command)
+                                                   ((listp command)
+                                                    (lambda () (apply (car command) (cdr command))))
+                                                   (t (cl-check-type command fbound)
+                                                      command)))
+                                     (command (if (and command desc) (cons desc command) command)))
+                                (define-key map (kbd key) command))
+                            ;; handle nil as command as an unbind, because (define-key ... nil) doesn't
+                            ;; work for some reason
+                            (unbind-key (kbd key) map))
+                          ))))))
 (beyond-easy-bind)
 
 (taps-def-double-tap-key beyond-motion-state-map "j" pointless-jump-char-timeout beyond-previous-line)
