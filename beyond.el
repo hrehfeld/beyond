@@ -360,7 +360,7 @@ See `set-cursor-color'."
 (defun beyond-theme-is-light? ()
   (eq 'light (frame-parameter nil 'background-mode)))
 
-(defcustom beyond-cursor-color-saturation 1.0
+(defcustom beyond-cursor-color-saturation 0.9
   "Saturation for generated cursor colors."
   :group 'beyond :type 'sexp)
 (defcustom beyond-cursor-color-value-light 0.3
