@@ -372,24 +372,25 @@ See `set-cursor-color'."
   :group 'beyond :type 'sexp)
 
 
-(defun beyond-update-cursor (&optional mode)
+(defun beyond-update-cursor (&optional state)
   "Update the cursor depending on the current beyond state.
 
 Cursor will be set for all active states, overwriting
 previous cursor settings.
 "
   (with-current-buffer (window-buffer)
-    (let ((type (alist-get (beyond--active-state) beyond-cursor-types))
-          (color (alist-get (beyond--active-state) beyond-cursor-colors)))
-      (beyond-debug cursor (message "beyond-update-cursor %S %S in %s with %S" type color (buffer-name) (beyond--active-state)))
-      (setq cursor-type (or type beyond-cursor-type-default))
-      (let ((color (or color
-                       (beyond-color-for-string
-                        (symbol-name mode)
-                        beyond-cursor-color-saturation
-                        (if (beyond-theme-is-light?) beyond-cursor-color-value-light beyond-cursor-color-value-dark)))))
-        (set-cursor-color color))
-      )))
+    (let ((state (or state (beyond--active-state))))
+      (let ((type (alist-get state beyond-cursor-types))
+            (color (alist-get state beyond-cursor-colors)))
+        (beyond-debug cursor (message "beyond-update-cursor %S %S in %s with %S" type color (buffer-name) state))
+        (setq cursor-type (or type beyond-cursor-type-default))
+        (let ((color (or color
+                         (beyond-color-for-string
+                          (symbol-name state)
+                          beyond-cursor-color-saturation
+                          (if (beyond-theme-is-light?) beyond-cursor-color-value-light beyond-cursor-color-value-dark)))))
+          (set-cursor-color color))
+        ))))
 ;; (beyond-update-cursor)
 (add-hook 'buffer-list-update-hook #'beyond-update-cursor)
 (add-hook 'beyond-state-switch-hook #'beyond-update-cursor)
