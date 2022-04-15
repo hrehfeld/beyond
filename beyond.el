@@ -121,7 +121,8 @@ Do NOT put blocking stuff here.")
            ))
 
 
-(defun beyond--switch-state (state)
+
+(defun beyond--switch-state (state &optional cycle)
   (cl-assert (symbolp state) "state %S should be a symbol" state)
   (let ((old-state (beyond--active-state)))
     (unless (eq state old-state)
@@ -132,7 +133,9 @@ Do NOT put blocking stuff here.")
         (beyond--run-state-hook old-state t)
         )
       ;; save and activate new state
-      (beyond--push-active-state state)
+      (if cycle
+          (beyond--swap-active-state state)
+        (beyond--push-active-state state))
       (beyond--state-set state t)
       (beyond--sanity-check)
       (beyond-debug hook (message "beyond--switch-state: running %S" state))
@@ -185,19 +188,6 @@ Returns a symbol or a list of symbols."
     (if (listp state)
         (car state)
       state)))
-
-(defun beyond-next-state ()
-  "Switch to the next beyond state in the state ring buffer for the current buffer."
-  (interactive)
-  (message "beyond-next-state")
-  (let ((states (beyond-find-state)))
-    (when (listp states)
-      (let ((el (member (beyond--active-state) states)))
-        (beyond--swap-active-state
-         (let ((next-state (if (cdr el) (cadr el) (car states))))
-           (message "%s" next-state)
-           next-state))))))
-
 
 
 (defmacro beyond-def-state-map (map-name &optional state parent-map supress?)
@@ -325,6 +315,18 @@ Functions are called with the state symbol as the only argument" state-name))
 
 (defun beyond-enter-insertion-state () (interactive) (beyond--switch-state 'beyond-insertion-state))
 (defun beyond-exit-insertion-state () (interactive) (beyond--switch-back-state))
+(defun beyond-next-state ()
+  "Switch to the next beyond state in the state ring buffer for the current buffer."
+  (interactive)
+  (message "beyond-next-state")
+  (let ((states (beyond-find-state)))
+    (when (listp states)
+      (let ((el (member (beyond--active-state) states)))
+        (beyond--switch-state
+         (let ((next-state (if (cdr el) (cadr el) (car states))))
+           (message "%s" next-state)
+           next-state)
+         t)))))
 
 
 
