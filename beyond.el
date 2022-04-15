@@ -67,6 +67,8 @@ beyond-command-state before beyond-motion-state.")
 (defun beyond--push-active-state (state)
   (push state beyond-state-stack))
 
+(defun beyond--swap-active-state (state)
+  (setq beyond-state-stack (cons state (cdr beyond-state-stack))))
 
 (defun beyond--state-set (state-sym state-val)
   "Enable or disable a state named `STATE-SYM'. When `ENABLE' is t, enable the state.
@@ -161,9 +163,10 @@ Do NOT put blocking stuff here.")
   (beyond-debug mode (message "beyond-states: %S %S %S" beyond-command-state beyond-insertion-state (beyond--active-state))))
 
 
-(defun beyond-initial-state ()
-  "Get the initial beyond state for current buffer."
+(defun beyond-find-state ()
+  "Get the beyond state(s) for current buffer.
 
+Returns a symbol or a list of symbols."
   (or (cl-loop for minor-mode in local-minor-modes
                with state = nil
                do (setq state (alist-get minor-mode beyond-minor-mode-states))
@@ -175,6 +178,25 @@ Do NOT put blocking stuff here.")
                if state return state)
       'beyond-command-state
       ))
+
+(defun beyond-initial-state ()
+  "Get the initial beyond state for current buffer."
+  (let ((state (beyond-find-state)))
+    (if (listp state)
+        (car state)
+      state)))
+
+(defun beyond-next-state ()
+  "Switch to the next beyond state in the state ring buffer for the current buffer."
+  (interactive)
+  (message "beyond-next-state")
+  (let ((states (beyond-find-state)))
+    (when (listp states)
+      (let ((el (member (beyond--active-state) states)))
+        (beyond--swap-active-state
+         (let ((next-state (if (cdr el) (cadr el) (car states))))
+           (message "%s" next-state)
+           next-state))))))
 
 
 
@@ -447,7 +469,12 @@ that condition triggers."
     (ediff-mode . beyond-insertion-state)
 
     )
-  "A alist of `(MAJOR-MODE . BEYOND-STATE)' to trigger a specific state for that major mode."
+  "A alist of `(MAJOR-MODE . BEYOND-STATE)' to trigger a specific state for that major mode.
+
+`beyond-state' is either a symbol that corresponds to a beyond
+state, or a list of such symbols. If a list, these can be
+switched between using `beyond-next-state'.
+"
   :group 'beyond :type '(list symbol))
 
 (defcustom beyond-state-trigger
