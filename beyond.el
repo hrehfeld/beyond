@@ -1011,8 +1011,9 @@ region further.")
                               (let* ((command (cond ((keymapp command) command)
                                                    ((listp command)
                                                     (lambda () (apply (car command) (cdr command))))
-                                                   (t (cl-check-type command fbound)
-                                                      command)))
+                                                   (t (progn
+                                                        (cl-check-type command fbound "is not a function")
+                                                        command))))
                                      (command (if (and command desc) (cons desc command) command)))
                                 (define-key map (kbd key) command))
                             ;; handle nil as command as an unbind, because (define-key ... nil) doesn't
