@@ -330,37 +330,64 @@ Functions are called with the state symbol as the only argument" state-name))
 
 
 
-(defvar-local beyond--original-cursor 'undefined "The cursor before insert mode. If this is the symbol `undefined', cursor-type is saved before changing")
 
-(defvar beyond-cursor-default '(box "#000") "The default cursor
-as `(type color)'. `Color' may be nil")
-(defcustom beyond-cursor-types '((beyond-insertion-state . (bar "#770"))
-                                 (beyond-command-state . (box "#000")))
-  "An alist of `(CURSOR-TYPE CURSOR-COLOR)' for each state.
 
-Cursor will be set for active all active states, overwriting
-previous cursor settings.
+(defvar-local beyond--original-cursor nil "The cursor before switching to beyond-mode.")
+
+(defvar beyond-cursor-type-default 'box
+  "The default cursor type.")
+
+(defcustom beyond-cursor-colors '((beyond-insertion-state . "#770")
+                                  (beyond-command-state . "#000"))
+  "An alist of `CURSOR-COLOR' for each state.
+
+See `set-cursor-color'."
+  :group 'beyond :type 'sexp)
+(defcustom beyond-cursor-types '((beyond-insertion-state . bar)
+                                  (beyond-command-state . box))
+  "An alist of `CURSOR-TYPE' for each state.
 
 See `set-cursor-color'."
   :group 'beyond :type 'sexp)
 
 ;;(toggle-debug-on-error)
 
-(defun beyond-update-cursor (&optional mode)
-  "Update the cursor depending on the current beyond state."
-    (with-current-buffer (window-buffer)
-    (let ((type-color
-           (alist-get (beyond--active-state) beyond-cursor-types)))
-      (when (eq beyond--original-cursor 'undefined)
-        ;;(message "beyond previous cursor in %s was %S %S" (buffer-name) cursor-type (frame-parameter nil 'cursor-color))
-        (setq beyond--original-cursor (list cursor-type (frame-parameter nil 'cursor-color))))
-      (beyond-debug cursor (message "beyond-update-cursor %S %i in %s with %S" type-color (length type-color) (buffer-name) (beyond--active-state)))
-      (cl-destructuring-bind (type color) (or type-color beyond--original-cursor)
-        (unless (eq type 'undefined)
-          (setq cursor-type type))
-        (when color
-          (set-cursor-color color)))
+(require 'color)
+(defun beyond-color-for-string (str sat val)
+	(let* ((hue (string-to-number (substring (md5 str) 0 8) 16))
+				 (hue (/ (mod hue 256) 255.0)))
+		(apply #'color-rgb-to-hex (color-hsl-to-rgb hue sat val))))
+(defun beyond-theme-is-light? ()
+  (eq 'light (frame-parameter nil 'background-mode)))
 
+(defcustom beyond-cursor-color-saturation 1.0
+  "Saturation for generated cursor colors."
+  :group 'beyond :type 'sexp)
+(defcustom beyond-cursor-color-value-light 0.3
+  "Color value (brightness) for generated cursor colors on light backgrounds."
+  :group 'beyond :type 'sexp)
+(defcustom beyond-cursor-color-value-dark 0.7
+  "Color value (brightness) for generated cursor colors on dark backgrounds."
+  :group 'beyond :type 'sexp)
+
+
+(defun beyond-update-cursor (&optional mode)
+  "Update the cursor depending on the current beyond state.
+
+Cursor will be set for all active states, overwriting
+previous cursor settings.
+"
+  (with-current-buffer (window-buffer)
+    (let ((type (alist-get (beyond--active-state) beyond-cursor-types))
+          (color (alist-get (beyond--active-state) beyond-cursor-colors)))
+      (beyond-debug cursor (message "beyond-update-cursor %S %S in %s with %S" type color (buffer-name) (beyond--active-state)))
+      (setq cursor-type (or type beyond-cursor-type-default))
+      (let ((color (or color
+                       (beyond-color-for-string
+                        (symbol-name mode)
+                        beyond-cursor-color-saturation
+                        (if (beyond-theme-is-light?) beyond-cursor-color-value-light beyond-cursor-color-value-dark)))))
+        (set-cursor-color color))
       )))
 ;; (beyond-update-cursor)
 (add-hook 'buffer-list-update-hook #'beyond-update-cursor)
@@ -518,6 +545,8 @@ return a beyond state to switch to or nil."
   :keymap nil
   (if beyond-mode
       (unless (minibufferp)
+        ;; save original cursor
+        (setq beyond--original-cursor (cons cursor-type (frame-parameter nil 'cursor-color)))
         (setq beyond-state-stack nil)
         (cl-pushnew 'beyond-state-map-alist-for-emulation-mode-map-alists emulation-mode-map-alists)
         ;; update the emulation keymaps everytime so that any change is catched by turning it off
@@ -529,7 +558,10 @@ return a beyond state to switch to or nil."
         ;;   (push 'beyond/after-change-hook after-change-functions))
         (beyond--switch-state
          (beyond-initial-state)))
-    (cl-delete 'beyond-state-map-alist emulation-mode-map-alists))
+    (cl-delete 'beyond-state-map-alist emulation-mode-map-alists)
+    (setq cursor-type (car beyond--original-cursor))
+    (set-frame-parameter nil 'cursor-color (cdr beyond--original-cursor))
+    (setq beyond--original-cursor (list cursor-type (frame-parameter nil 'cursor-color))))
   )
 
 ;; make modeline lighter update after each state switch
