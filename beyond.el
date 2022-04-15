@@ -323,7 +323,9 @@ Functions are called with the state symbol as the only argument" state-name))
     (when (listp states)
       (let ((el (member (beyond--active-state) states)))
         (beyond--switch-state
-         (let ((next-state (if (cdr el) (cadr el) (car states))))
+         (let ((next-state
+                ;; if there's a following element take that, otherwise take the first one in the list
+                (if (cdr el) (cadr el) (car states))))
            (message "%s" next-state)
            next-state)
          t)))))
