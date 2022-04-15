@@ -19,8 +19,9 @@
   ;;(message "beyond-debug %S %S %S" type (member type beyond-debug) beyond-debug)
   `(when (memq ',type beyond-debug)
      (progn ,@body)
-    ))
+     ))
 ;;(setq beyond-debug '(hook mode))
+;;(setq beyond-debug '(cursor))
 ;;(setq beyond-debug nil)
 ;;(beyond-debug hook t)
 
@@ -29,7 +30,7 @@
 ;; ;; (defvar beyond/insert-origin 0 "Point at start of insert state.")
 
 (defvar-local beyond-input-method nil
-"The input method to activate
+  "The input method to activate
 when going to insert state. (When leaving insert state the
 input-method is reset to nil.)")
 
@@ -318,17 +319,15 @@ Functions are called with the state symbol as the only argument" state-name))
 (defun beyond-next-state ()
   "Switch to the next beyond state in the state ring buffer for the current buffer."
   (interactive)
-  (message "beyond-next-state")
   (let ((states (beyond-find-state)))
     (when (listp states)
-      (let ((el (member (beyond--active-state) states)))
-        (beyond--switch-state
-         (let ((next-state
-                ;; if there's a following element take that, otherwise take the first one in the list
-                (if (cdr el) (cadr el) (car states))))
-           (message "%s" next-state)
-           next-state)
-         t)))))
+      (beyond--switch-state
+       (let* ((cell (member (beyond--active-state) states))
+              (next-state
+               ;; if there's a following element use next state, otherwise take the first state
+               (if (cdr cell) (cadr cell) (car states))))
+         next-state)
+       t))))
 
 
 
