@@ -526,12 +526,6 @@ return a beyond state to switch to or nil."
   :group 'beyond :type '(list symbol))
 
 
-(defcustom beyond-major-mode-command-statekeymaps
-  nil
-  "A alist of `(MAJOR-MODE . COMMAND-STATE-KEYMAP)' to override the command-state keymap."
-  :group 'beyond :type '(list symbol))
-
-
 ;;; Initialisation and activation
 
 ;; have an extra indirection because emulation-mode-map-alists needs direct references to keymaps,
