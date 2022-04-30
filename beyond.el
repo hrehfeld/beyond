@@ -191,6 +191,9 @@ Returns a symbol or a list of symbols."
       state)))
 
 
+(defun beyond--active-state-map ()
+  (alist-get (beyond--active-state) beyond-state-map-alist))
+
 (defmacro beyond-def-state-map (map-name &optional state parent-map supress?)
   (cl-check-type map-name symbol)
   (cl-check-type state symbol)
