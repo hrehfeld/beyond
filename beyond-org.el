@@ -54,9 +54,9 @@
          ("<backtab>" (progn (org-back-to-heading) (org-shifttab)) "Global Fold")
          ("j" pointless-jump-org-headline "Jump Headline")
          (";" org-convenience-heading-goto-title "Goto Title")
-         ("[" org-convenience-forward-heading-same-level-or-up-forward-heading-same-level "Next Headline")
+         ("n" org-convenience-forward-heading-same-level-or-up-forward-heading-same-level "Next Headline")
          ("p" org-convenience-backward-heading-same-level-or-up-heading "Previous Headline")
-         ("k" org-up-element "Up")
+         ("k" org-convenience-up-element-or-backward-heading "Up")
          ("l" org-next-visible-heading "Next"))))
 (beyond-easy-bind beyond-org-mode-easy-bindings)
 
