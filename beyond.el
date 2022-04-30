@@ -1040,8 +1040,9 @@ region further.")
                         (progn
                           (if command
                               (let* ((command (cond ((keymapp command) command)
-                                                   ((listp command)
-                                                    (lambda () (apply (car command) (cdr command))))
+                                                    ((listp command)
+                                                     ;; construct lambda
+                                                     `(lambda () (interactive) ,command))
                                                    (t (progn
                                                         (cl-check-type command fbound "is not a function")
                                                         command))))
