@@ -1046,7 +1046,7 @@ region further.")
                                                    (t (progn
                                                         (cl-check-type command fbound "is not a function")
                                                         command))))
-                                     (command (if (and command desc) (cons desc command) command)))
+                                     (command (if (and command desc) (cons (if (listp desc) (eval desc t) desc) command) command)))
                                 (define-key map (kbd key) command))
                             ;; handle nil as command as an unbind, because (define-key ... nil) doesn't
                             ;; work for some reason
