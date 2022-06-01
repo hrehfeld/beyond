@@ -1028,20 +1028,35 @@ region further.")
 (defun beyond-easy-bind (&optional bindings)
   (interactive)
   (let ((bindings (or bindings beyond-easy-bindings)))
-    (cl-loop for (map . bindings) in bindings
+    (cl-loop for (keymap-sym . bindings) in bindings
              do
-             (let ((map (if (keymapp map) map (symbol-value map))))
+             (let ((map (if (keymapp keymap-sym) keymap-sym (symbol-value keymap-sym))))
                (cl-loop for (key command desc) in bindings
                         do
                         (progn
                           (if command
-                              (let* ((command (cond ((keymapp command) command)
+                              (let* ((command (cond ((and (symbolp command)
+                                                          (boundp command)
+                                                          (keymapp (symbol-value command)))
+                                                     (symbol-value command))
+                                                    ((keymapp command)
+                                                     command)
                                                     ((listp command)
-                                                     ;; construct lambda
-                                                     `(lambda () (interactive) ,command))
-                                                   (t (progn
-                                                        (cl-check-type command fbound "is not a function")
-                                                        command))))
+                                                     (if (eq (car command) :tap)
+                                                         (let ((base-command (cadr command))
+                                                               (commands (cddr command)))
+                                                           (eval `(taps-def-taps
+                                                                   ,base-command
+                                                                   ,commands
+                                                                   :timeout ,(if (length< commands 2) 0.3 0.5)
+                                                                  :base-map ,keymap-sym :base-key ,key
+                                                                  ) t))
+                                                         ;; construct lambda
+                                                         `(lambda () (interactive) ,command)))
+                                                    (t
+                                                     (progn
+                                                       (cl-check-type command fbound "is not a function")
+                                                       command))))
                                      (command (if (and command desc) (cons (if (listp desc) (eval desc t) desc) command) command)))
                                 (define-key map (kbd key) command))
                             ;; handle nil as command as an unbind, because (define-key ... nil) doesn't
