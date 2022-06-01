@@ -869,8 +869,8 @@ example."
 (defun beyond-kill-region-or-line ()
   "Kill region if active, line if at line end, or cycle space."
   (interactive)
-  (if (region-active-p)
-      (kill-region (region-beginning) (region-end))
+  (if (use-region-p)
+      (kill-region nil nil t)
     (let ((point (point)))
       (if (eolp)
           (prog1
