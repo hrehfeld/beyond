@@ -879,6 +879,30 @@ example."
         ;; kill ws first
         (cycle-spacing)))))
 
+(defun beyond-smart-hungry-delete ()
+  "Kill region if active, line if at line end, or cycle space."
+  (interactive)
+  (if (use-region-p)
+      (kill-region nil nil t)
+    (let ((forward-skip-syntax " ")
+          (backward-skip-syntax " ")
+          (insert-char " "))
+      (let ((point (point))
+            (skip-forward-pos (save-excursion (skip-syntax-forward forward-skip-syntax) (point)))
+            (skip-backward-pos (save-excursion (skip-syntax-backward backward-skip-syntax) (point))))
+        (cond ((not (equal (point) skip-forward-pos))
+               (kill-region (point) skip-forward-pos))
+              ((not (equal (point) skip-backward-pos))
+               (kill-region (point) skip-backward-pos))
+              ((eolp)
+               (prog1
+                   (kill-line)
+                 (message "killed line")))
+              ((bolp)
+               (backward-delete-char 1))
+              (t (insert insert-char))
+              )))))
+
 
 ;;; mark functions
 
