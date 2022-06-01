@@ -864,6 +864,8 @@ example."
 
 ;; editing commands
 
+;; TODO: delete space backwards if in front of non-space
+;; TODO: smart-hungry
 (defun beyond-kill-region-or-line ()
   "Kill region if active, line if at line end, or cycle space."
   (interactive)
