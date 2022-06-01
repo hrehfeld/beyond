@@ -1064,15 +1064,6 @@ region further.")
                             (unbind-key (kbd key) map))
                           ))))))
 
-(taps-def-double-tap-key beyond-motion-state-map "j" pointless-jump-char-timeout beyond-previous-line)
-(taps-def-double-tap-key beyond-motion-state-map ";" pointless-jump-word-beginning beyond-next-line)
-(taps-def-double-tap-key beyond-motion-state-map "u" pointless-jump-beginning-of-line beyond-back-to-indentation-or-beginning-of-line)
-(taps-def-double-tap-key beyond-motion-state-map "p" pointless-jump-end-of-line end-of-line)
-(taps-def-double-tap-key beyond-motion-state-map "n" pointless-jump-mark exchange-point-and-mark)
-
-(taps-def-double-tap-key beyond-command-state-map "m" newline open-line)
-
-
 
 ;; make insert mode automatically stop after idle time
 

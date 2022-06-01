@@ -1,8 +1,21 @@
 (require 'beyond)
 
-(setq beyond-easy-bindings
-      `((beyond-command-state-map
-         . (("s" beyond-kill-region-or-line nil)
+(defvar beyond-goto-map (make-keymap) "Keymap with special goto commands")
+
+(beyond-easy-bind
+ `((beyond-goto-map
+    ("g" ,(if (fboundp #'consult-goto-line) #'consult-goto-line #'goto-line) "Goto Line")
+    ("." end-of-buffer "Buffer end")
+    ("," beginning-of-buffer "Buffer begin")
+    (">" end-of-buffer-other-window "Other buffer end")
+    ("<" beginning-of-buffer-other-window "Other buffer begin")
+    ("p" previous-buffer "Previous buffer")
+    ("n" next-buffer "Next Buffer"))
+   (beyond-insertion-state-map
+    ("C-r" beyond-exit-insertion-state))
+   (beyond-command-state-map
+         . (("q" quoted-insert "Insert char")
+            ("s" beyond-smart-hungry-delete nil)
             ("d" kill-region)
             ("y" yank nil)
             ("e" er/expand-region nil)
@@ -17,27 +30,46 @@
             ("<backspace>" delete-backward-char nil)
             ("a" embark-act nil)
             ("?" (which-key-show-keymap (beyond--active-state-map)))
+            ("(" beyond-dilate-region "Dialate with parentheses")
+            (")" beyond-erode-region "Erode with parentheses")
             ))
         (beyond-special-state-map
          . (("x" ,ctl-x-map "C-x")))
-        (beyond-motion-state-map
+        (beyond-minimal-motion-state-map
          ;; should only be right-handed
-         . (
-            ("c" beyond--read-key-sequence-control-swapped nil)
-            ("\\" beyond-quote-keypress nil)
-            ("'" pointless-jump-sexp nil)
-            ("." xref-find-definitions-other-window nil)
+         . (("\\" beyond-quote-keypress nil)
             ("i" scroll-down-command nil)
             ("o" scroll-up-command nil)
             ("O" scroll-other-window nil)
-            ("I" scroll-other-window-down nil)
+            ("I" scroll-other-window-down nil)))
+        (beyond-motion-state-map
+         ;; should only be right-handed
+         . (("c" beyond--read-key-sequence-control-swapped nil)
+            ("g" beyond-goto-map nil)
+            ("'" pointless-jump-sexp nil)
+            ("j" pointless-jump-char-timeout nil)
+            ("." xref-find-definitions nil)
+            ("M-." xref-find-definitions-other-window nil)
+            ("," xref-pop-marker-stack nil)
             ("k" backward-char nil)
             ("l" forward-char nil)
             ("h" isearch-forward nil)
+            ("H" (:tap consult-ripgrep
+                       ("f" projectile-find-file)))
+            ("u" (:tap pointless-jump-beginning-of-line ("p" beyond-back-to-indentation-or-beginning-of-line)))
+            ("p" (:tap pointless-jump-end-of-line ("p" end-of-line)))
+            ("n" (:tap nil ("n" exchange-point-and-mark) ("m" pointless-jump-mark)))
             ))))
 
-;;(unbind-key "j" beyond-command-state-map )
+;;(unbind-key ";" beyond-command-state-map )
 
-(beyond-easy-bind beyond-easy-bindings)
+
+(taps-def-double-tap-key beyond-motion-state-map "n" pointless-jump-mark exchange-point-and-mark)
+(taps-def-double-tap-key beyond-motion-state-map "b" pointfull-pop-local-mark pointfull-mark)
+
+(taps-def-double-tap-key beyond-command-state-map "m" newline open-line)
+
+
+
 
 (provide 'beyond-keybindings)
