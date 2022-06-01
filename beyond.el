@@ -903,6 +903,93 @@ example."
               (t (insert insert-char))
               )))))
 
+(defvar beyond-syntax-pairs '(("(" ")") ("[" "]") ("<" ">") ("'" "'") ("\"" "\"") ("{" "}")))
+
+(defun beyond--dilate-region (beginning-repl end-repl)
+  ""
+  (save-excursion (goto-char (region-beginning))
+                  (insert beginning-repl))
+  (save-excursion (goto-char (region-end))
+                  (insert end-repl)))
+
+(defun beyond--syntax-pair-choose (prompt)
+  (let* ((keys (mapcar #'car beyond-syntax-pairs))
+         (prompt (format prompt (string-join keys " ")))
+         ;; fixme: if pairs start with the same char, we have conflicts
+         (pair-char (read-char-from-minibuffer
+                     prompt
+                     (mapcar #'string-to-char keys)))
+         (pair-str (char-to-string pair-char))
+         (pair (car (seq-filter (lambda (pair) (string-prefix-p pair-str (car pair)))
+                                beyond-syntax-pairs))))
+    pair))
+
+(defun beyond--erode-region (beginning-repl end-repl)
+  ""
+  (let* ((backward-pos (if (use-region-p) (region-beginning) (point)))
+        (forward-pos (if (use-region-p) (region-end) (point)))
+        (beginning backward-pos)
+        (end forward-pos))
+    (save-excursion
+      (goto-char backward-pos)
+      (when (search-backward beginning-repl)
+        "ttest \"foo"
+        (delete-region (match-beginning 0) (match-end 0))
+        (setq beginning (point))
+      (goto-char forward-pos)
+      (when (search-forward end-repl)
+        (delete-region (match-beginning 0) (match-end 0))
+        (setq end (point)))))
+    (list beginning end)))
+
+(defun beyond-erode-region ()
+  ""
+  (interactive)
+  (let* ((pair (beyond--syntax-pair-choose "Erode region by pair %S: ")))
+    (apply #'beyond--erode-region pair)))
+
+(defun beyond-dilate-region ()
+  ""
+  (interactive)
+  (let* ((pair (beyond--syntax-pair-choose "Dilate region by pair %S: ")))
+    (apply #'beyond--dilate-region pair)))
+
+(defun beyond-syntax-pair-exchange ()
+  ""
+  (interactive)
+  (let* ((pair (beyond--syntax-pair-choose "Erode region by pair %S: "))
+         (pair-new (beyond--syntax-pair-choose "Dilate region by pair %S: ")))
+    (cl-multiple-value-bind (beginning end) (apply #'beyond--erode-region pair)
+      (push-mark end t t)
+      (goto-char beginning)
+      (apply #'beyond--dilate-region pair-new))))
+
+(defun beyond-mark-surround ()
+  "Kill region if active, line if at line end, or cycle space."
+  (interactive)
+  (if (use-region-p)
+      (kill-region nil nil t)
+    (let ((forward-skip-syntax " ")
+          (backward-skip-syntax " ")
+          (insert-char " "))
+      (let ((point (point))
+            (skip-forward-pos (save-excursion (skip-syntax-forward forward-skip-syntax) (point)))
+            (skip-backward-pos (save-excursion (skip-syntax-backward backward-skip-syntax) (point))))
+        (cond ((not (equal (point) skip-forward-pos))
+               (kill-region (point) skip-forward-pos))
+              ((not (equal (point) skip-backward-pos))
+               (kill-region (point) skip-backward-pos))
+              ((eolp)
+               (prog1
+                   (kill-line)
+                 (message "killed line")))
+              ((bolp)
+               (backward-delete-char 1))
+              (t (insert insert-char))
+              )))))
+
+
+
 
 ;;; mark functions
 
