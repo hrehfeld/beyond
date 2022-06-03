@@ -347,13 +347,13 @@ Functions are called with the state symbol as the only argument" state-name))
 (defvar beyond-cursor-type-default 'box
   "The default cursor type.")
 
-(defcustom beyond-cursor-colors '((beyond-insertion-state . "#770")
+(defcustom beyond-cursor-colors '((beyond-insertion-state . "#00a")
                                   (beyond-command-state . "#000"))
   "An alist of `CURSOR-COLOR' for each state.
 
 See `set-cursor-color'."
   :group 'beyond :type 'sexp)
-(defcustom beyond-cursor-types '((beyond-insertion-state . bar)
+(defcustom beyond-cursor-types '((beyond-insertion-state . box)
                                   (beyond-command-state . box))
   "An alist of `CURSOR-TYPE' for each state.
 
