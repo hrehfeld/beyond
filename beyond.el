@@ -1148,7 +1148,8 @@ region further.")
                                 (define-key map (kbd key) command))
                             ;; handle nil as command as an unbind, because (define-key ... nil) doesn't
                             ;; work for some reason
-                            (unbind-key (kbd key) map))
+                            ;;(unbind-key (kbd key) map)
+                            (define-key map (kbd key) 'undefined))
                           ))))))
 
 
