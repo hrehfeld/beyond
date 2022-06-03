@@ -6,12 +6,12 @@
 (beyond-def-state beyond-org-mode-refile-state "Refile headlines in `org-mode' buffers" "oRFI" beyond-org-mode-command-state)
 ;;(pp (macroexpand-1 '(beyond-def-state beyond-org-mode-command-state "Beyond command state for `org-mode' buffers" "CMD" beyond-command-state)))
 
-(add-to-list 'beyond-major-mode-states
+(add-to-list 'beyond-mode-command-state-alist
              '(org-mode . (beyond-command-state beyond-org-mode-command-state beyond-org-mode-refile-state)))
 
 (beyond-def-state beyond-org-agenda-mode-command-state "Beyond command state for `org-agenda-mode' buffers" "oaCMD" beyond-command-state)
 ;;(pp (macroexpand-1 '(beyond-def-state beyond-org-agenda-mode-command-state "Beyond command state for `org-agenda-mode' buffers" "CMD" beyond-command-state)))
-(add-to-list 'beyond-major-mode-states '(org-agenda-mode . beyond-org-agenda-mode-command-state))
+(add-to-list 'beyond-mode-command-state-alist '(org-agenda-mode . beyond-org-agenda-mode-command-state))
 
 (setq beyond-org-mode-easy-bindings
       `((beyond-org-mode-refile-state-map

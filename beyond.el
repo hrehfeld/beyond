@@ -45,31 +45,24 @@ input-method is reset to nil.)")
   "List of cons pairs `(VAR . MAP)' that will enable beyond's state's keymaps.
 
 Every state should be listed here as it is used by
-`beyond--states'.
+`beyond--all-states'.
 
 Earlier items overwrite bindings in later maps, so make sure
 inheriting states appear before their parents - e.g.
 beyond-command-state before beyond-motion-state.")
 ;;(kill-local-variable 'beyond-state-map-alist)
 
-(defun beyond--states ()
+(defun beyond--all-states ()
   (mapcar #'car beyond-state-map-alist))
 
-;; stack of states infrastructure
-(defvar-local beyond-state-stack nil "Stack of active states.")
-;; (setq beyond-state-stack nil)
+(defvar-local beyond--buffer-active-state nil "Active state.")
+(defun beyond--buffer-active-state () beyond--buffer-active-state)
 
-(defun beyond--active-state ()
-  (car beyond-state-stack))
+(defvar-local beyond--buffer-command-state nil "Active state.")
+(defun beyond--buffer-command-state () beyond--buffer-command-state)
 
-(defun beyond--pop-active-state ()
-  (pop beyond-state-stack))
-
-(defun beyond--push-active-state (state)
-  (push state beyond-state-stack))
-
-(defun beyond--swap-active-state (state)
-  (setq beyond-state-stack (cons state (cdr beyond-state-stack))))
+(defun beyond--set-buffer-command-state (state)
+  (setq beyond--buffer-command-state state))
 
 (defun beyond--state-set (state-sym state-val)
   "Enable or disable a state named `STATE-SYM'. When `ENABLE' is t, enable the state.
@@ -88,10 +81,11 @@ just a variable."
 
 (defun beyond--sanity-check ()
   ;; only ever one state active
-  (cl-assert (= 1 (seq-count #'symbol-value (beyond--states))) t "%S" (-zip-lists (beyond--states) (mapcar #'symbol-value (beyond--states))))
-  (cl-assert (symbol-value (beyond--active-state)) t)
+  (cl-assert (= 1 (seq-count #'symbol-value (beyond--all-states)))
+             t "%S" (-zip-lists (beyond--all-states) (mapcar #'symbol-value (beyond--all-states))))
+  (cl-assert (symbol-value beyond--buffer-active-state) t)
   ;; state's map is in the currently active keymaps
-  (let* ((map-sym (intern (concat (symbol-name (beyond--active-state)) "-map")))
+  (let* ((map-sym (intern (concat (symbol-name (beyond--buffer-active-state)) "-map")))
          (map (symbol-value map-sym)))
     (beyond-debug mode (message "beyond--sanity-check: index of %S: %i" map-sym (cl-position map (current-active-maps))))
     (cl-assert (member map (current-active-maps)) t)
@@ -122,10 +116,14 @@ Do NOT put blocking stuff here.")
            ))
 
 
+(defun beyond--is-insertion-state (state)
+  ;; FIXME: use state-parents to check if a state inherits from insertion-state
+  (eq state 'beyond-insertion-state))
+
 
 (defun beyond--switch-state (state &optional cycle)
   (cl-assert (symbolp state) "state %S should be a symbol" state)
-  (let ((old-state (beyond--active-state)))
+  (let ((old-state beyond--buffer-active-state))
     (unless (eq state old-state)
       (beyond-debug mode (message "Beyond switching from %S to %S in %s" old-state state (buffer-name)))
       ;; disable previous state
@@ -134,65 +132,31 @@ Do NOT put blocking stuff here.")
         (beyond--run-state-hook old-state t)
         )
       ;; save and activate new state
-      (if cycle
-          (beyond--swap-active-state state)
-        (beyond--push-active-state state))
+      (unless (beyond--is-insertion-state state)
+        (beyond--set-buffer-command-state state))
+      (setq beyond--buffer-active-state state)
       (beyond--state-set state t)
       (beyond--sanity-check)
       (beyond-debug hook (message "beyond--switch-state: running %S" state))
       (run-hook-with-args 'beyond-state-switch-hook state)
       (beyond--run-state-hook state)
       ))
-  (beyond-debug mode (message "beyond-states: %S %S %S" beyond-command-state beyond-insertion-state (beyond--active-state))))
-
-(defun beyond--switch-back-state ()
   (beyond--sanity-check)
-  (when (length< beyond-state-stack 2)
-    (user-error "beyond: can't exit last state! %S %S %S" beyond-command-state beyond-insertion-state (beyond--active-state)))
-  (let ((state (beyond--active-state)))
-    ;; exit current state
-    (beyond--state-set state nil)
-    (beyond--run-state-hook state t)
-    (beyond--pop-active-state)
-    ;; enter previous state
-    (let ((previous-state (beyond--active-state)))
-      (cl-assert previous-state t)
-      (beyond-debug mode (message "Beyond switching back from %S to %S in %s" state previous-state (buffer-name)))
-      (beyond--state-set previous-state t)
-      (beyond--run-state-hook previous-state)
-      (run-hook-with-args 'beyond-state-switch-hook previous-state)
-      )
-  (beyond--sanity-check)
-  )
-  (beyond-debug mode (message "beyond-states: %S %S %S" beyond-command-state beyond-insertion-state (beyond--active-state))))
+  (beyond-debug mode (message "beyond-states: %S %S %S" beyond-command-state beyond-insertion-state (beyond--buffer-command-state))))
 
-
-(defun beyond-find-state ()
-  "Get the beyond state(s) for current buffer.
-
-Returns a symbol or a list of symbols."
-  (or (cl-loop for minor-mode in local-minor-modes
-               with state = nil
-               do (setq state (alist-get minor-mode beyond-minor-mode-states))
-               if state return state)
-      (alist-get major-mode beyond-major-mode-states)
-      (cl-loop for trigger in beyond-state-trigger
-               with state = nil
-               do (setq state (funcall trigger))
-               if state return state)
-      'beyond-command-state
-      ))
 
 (defun beyond-initial-state ()
   "Get the initial beyond state for current buffer."
-  (let ((state (beyond-find-state)))
+  (let ((state (if (beyond--buffer-start-in-insertion-state?)
+                   (beyond--find-insertion-buffer-state)
+                 (beyond--find-command-buffer-state))))
     (if (listp state)
         (car state)
       state)))
 
 
-(defun beyond--active-state-map ()
-  (alist-get (beyond--active-state) beyond-state-map-alist))
+(defun beyond--buffer-active-state-map ()
+  (alist-get beyond--buffer-active-state beyond-state-map-alist))
 
 (defmacro beyond-def-state-map (map-name &optional state parent-map supress?)
   (cl-check-type map-name symbol)
@@ -324,14 +288,14 @@ Functions are called with the state symbol as the only argument" state-name))
  ))
 
 (defun beyond-enter-insertion-state () (interactive) (beyond--switch-state 'beyond-insertion-state))
-(defun beyond-exit-insertion-state () (interactive) (beyond--switch-back-state))
+(defun beyond-exit-insertion-state () (interactive) (beyond--switch-state (beyond--buffer-command-state)))
 (defun beyond-next-state ()
   "Switch to the next beyond state in the state ring buffer for the current buffer."
   (interactive)
-  (let ((states (beyond-find-state)))
+  (let ((states (beyond--find-command-buffer-state)))
     (when (listp states)
       (beyond--switch-state
-       (let* ((cell (member (beyond--active-state) states))
+       (let* ((cell (member (beyond--buffer-command-state) states))
               (next-state
                ;; if there's a following element use next state, otherwise take the first state
                (if (cdr cell) (cadr cell) (car states))))
@@ -388,7 +352,7 @@ Cursor will be set for all active states, overwriting
 previous cursor settings.
 "
   (with-current-buffer (window-buffer)
-    (let ((state (or state (beyond--active-state))))
+    (let ((state (or state beyond--buffer-active-state)))
       (let ((type (alist-get state beyond-cursor-types))
             (color (alist-get state beyond-cursor-colors)))
         (beyond-debug cursor (message "beyond-update-cursor %S %S in %s with %S" type color (buffer-name) state))
@@ -451,85 +415,100 @@ previous cursor settings.
 ;;       (delete-region (+ p0 (nth 0 change)) (+ p0 (nth 0 change) (nth 1 change)))
 ;;       (insert (nth 2 change)))))
 
-(defcustom beyond-special-state-list
-  '(Buffer-menu-mode
-    cfw:calendar-mode
-    debugger-mode
-    ediff-mode
-    ediff-meta-mode
-    finder-mode
-    git-rebase-mode
-    mu4e-headers-mode
-    mu4e-view-mode
-    notmuch-hello-mode
-    notmuch-search-mode
-    notmuch-show-mode
-    notmuch-tree-mode
-    org-agenda-mode
-    pass-mode
-    view-mode
-    vterm-mode)
-    "A List of modes which should use `beyond-special-state'."
-    :group 'beyond
-    :type '(repeat symbol))
-
 (defun beyond-shell-mode-p ()
   "Is the `major-mode' any of the shell modes?"
   (derived-mode-p 'comint-mode 'eshell-mode 'term-mode 'vterm-mode))
 
 
-(defcustom beyond-minor-mode-states
-  (mapcar (lambda (mode) `(,mode . beyond-special-state))
-          '(magit-blame-mode
-            Buffer-menu-mode
-            cfw:calendar-mode
-            debugger-mode
-            ediff-mode
-            ediff-meta-mode
-            finder-mode
-            git-rebase-mode
-            mu4e-headers-mode
-            mu4e-view-mode
-            notmuch-hello-mode
-            notmuch-search-mode
-            notmuch-show-mode
-            notmuch-tree-mode
-            pass-mode
-            view-mode))
-  "A alist of `(MINOR-MODE . BEYOND-STATE)' to trigger a specific state for that minor mode.
+(defcustom beyond-mode-command-state-alist
+  (append
+   '((org-agenda-mode . beyond-special-state))
+   (mapcar (lambda (mode) `(,mode . beyond-special-state))
+           '(magit-blame-mode
+             Buffer-menu-mode
+             cfw:calendar-mode
+             debugger-mode
+             ediff-mode
+             ediff-meta-mode
+             finder-mode
+             git-rebase-mode
+             mu4e-headers-mode
+             mu4e-view-mode
+             notmuch-hello-mode
+             notmuch-search-mode
+             notmuch-show-mode
+             notmuch-tree-mode
+             pass-mode
+             view-mode)))
+  "A alist of `(MODE . BEYOND-STATE)' to trigger a specific command state for that mode.
 
-It actually just checks for a variable of that name to see if
-that condition triggers."
+It actually just checks for a variable of that name to see if that condition triggers."
   :group 'beyond :type '(repeat symbol))
 
-(defcustom beyond-major-mode-states
-  '((message-mode . beyond-insertion-state)
-    (org-agenda-mode . beyond-special-state)
-    (vterm-mode . beyond-insertion-state)
-    (ediff-mode . beyond-insertion-state)
-
-    )
-  "A alist of `(MAJOR-MODE . BEYOND-STATE)' to trigger a specific state for that major mode.
-
-`beyond-state' is either a symbol that corresponds to a beyond
-state, or a list of such symbols. If a list, these can be
-switched between using `beyond-next-state'.
-"
-  :group 'beyond :type '(list symbol))
-
-(defcustom beyond-state-trigger
-  (list ;; see major-mode conventions
-    ;; https://www.gnu.org/software/emacs/manual/html_node/elisp/Major-Mode-Conventions.html
-   (lambda () (when (and (eq (get major-mode 'mode-class) 'special)
+(defun beyond--major-mode-is-special ()
+  (when (and (eq (get major-mode 'mode-class) 'special)
                          (not (beyond-shell-mode-p)))
                 'beyond-special-state))
-   (lambda () (when (string-match "COMMIT_EDITMSG" (buffer-name))
-                'beyond-insertion-state)))
-  "A alist of predicate functions to trigger special state.
+
+(defcustom beyond-command-state-selectors
+  (list ;; see major-mode conventions
+    ;; https://www.gnu.org/software/emacs/manual/html_node/elisp/Major-Mode-Conventions.html
+   #'beyond--major-mode-is-special
+   )
+  "A list of selector functions to return a command/special state for current buffer.
 
 Each entry is called as a function with no arguments and should
 return a beyond state to switch to or nil."
   :group 'beyond :type '(list symbol))
+
+(defcustom beyond-insertion-state-selectors
+  nil
+  "A list of selector functions to return a insertion state for current buffer.
+
+Each entry is called as a function with no arguments and should
+return a beyond state to switch to or nil."
+  :group 'beyond :type '(list symbol))
+
+(defun beyond--find-buffer-state (state-selectors mode-state-alist default)
+  "Return most appropriate state for current buffer."
+  (or (cl-loop for state-selector in state-selectors
+               with state = nil
+               do (setq state (funcall state-selector))
+               if state return state)
+      (cl-loop for minor-mode in local-minor-modes
+               with state = nil
+               do (setq state (alist-get minor-mode mode-state-alist))
+               if state return state)
+      (alist-get major-mode mode-state-alist)
+      default))
+
+(defun beyond--find-command-buffer-state ()
+  (beyond--find-buffer-state beyond-command-state-selectors beyond-mode-command-state-alist 'beyond-command-state))
+
+(defun beyond--find-insertion-buffer-state ()
+  (beyond--find-buffer-state beyond-insertion-state-selectors beyond-mode-insertion-state-alist 'beyond-insertion-state))
+
+(defcustom beyond-mode-insertion-state-alist
+  nil
+  "A alist of `(MODE . BEYOND-STATE)' to trigger a specific insertion state for that mode.
+
+It actually just checks for a variable of that name to see if that condition triggers."
+  :group 'beyond :type '(repeat symbol))
+
+(defcustom beyond-start-in-insertion-state?-modes '(message-mode vterm-mode ediff-mode) "A list of modes that trigger insertion state when enabling `beyond-mode'.")
+
+(defcustom beyond-start-in-insertion-state?-selectors
+  (list
+   (lambda () (when (string-match "COMMIT_EDITMSG" (buffer-name))
+                'beyond-insertion-state)))
+  "A alist of selector functions to return an insertion state for current buffer.
+
+Each entry is called as a function with no arguments and should
+return a beyond state to switch to or nil."
+  :group 'beyond :type '(list symbol))
+
+(defun beyond--buffer-start-in-insertion-state? ()
+  (beyond--find-buffer-state beyond-start-in-insertion-state?-selectors (mapcar (lambda (mode) (cons mode t)) beyond-start-in-insertion-state?-modes) nil))
 
 
 ;;; Initialisation and activation
@@ -540,7 +519,7 @@ return a beyond state to switch to or nil."
 
 (defun beyond-lighter-string ()
   "Return the lighter string appropriate for the current state."
-  (alist-get (beyond--active-state) beyond-state-lighters)
+  (alist-get beyond--buffer-active-state beyond-state-lighters)
   )
 
 
@@ -552,7 +531,6 @@ return a beyond state to switch to or nil."
       (unless (minibufferp)
         ;; save original cursor
         (setq beyond--original-cursor (cons cursor-type (frame-parameter nil 'cursor-color)))
-        (setq beyond-state-stack nil)
         (cl-pushnew 'beyond-state-map-alist-for-emulation-mode-map-alists emulation-mode-map-alists)
         ;; update the emulation keymaps everytime so that any change is catched by turning it off
         ;; and on again
@@ -561,6 +539,7 @@ return a beyond state to switch to or nil."
                        collect (cons mode-sym (symbol-value map-sym))))
         ;; (unless (memq 'beyond/after-change-hook after-change-functions)
         ;;   (push 'beyond/after-change-hook after-change-functions))
+        (setq beyond--buffer-command-state (beyond--find-command-buffer-state))
         (beyond--switch-state
          (beyond-initial-state)))
     (cl-delete 'beyond-state-map-alist emulation-mode-map-alists)

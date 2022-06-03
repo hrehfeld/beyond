@@ -29,7 +29,7 @@
             ("<SPC>" beyond-next-state nil)
             ("<backspace>" delete-backward-char nil)
             ("a" embark-act nil)
-            ("?" (which-key-show-keymap (beyond--active-state-map)))
+            ("?" (which-key-show-keymap (beyond--buffer-active-state-map)))
             ("(" beyond-dilate-region "Dialate with parentheses")
             (")" beyond-erode-region "Erode with parentheses")
             ))
