@@ -47,6 +47,7 @@
          . (("c" beyond--read-key-sequence-control-swapped nil)
             ("g" beyond-goto-map nil)
             ("'" pointless-jump-sexp nil)
+            (";" pointless-jump-word-beginning nil)
             ("j" pointless-jump-char-timeout nil)
             ("." xref-find-definitions nil)
             ("M-." xref-find-definitions-other-window nil)
