@@ -14,53 +14,61 @@
    (beyond-insertion-state-map
     ("C-r" beyond-exit-insertion-state))
    (beyond-command-state-map
-         . (("q" quoted-insert "Insert char")
-            ("s" beyond-smart-hungry-delete nil)
-            ("d" kill-region)
-            ("y" yank nil)
-            ("e" er/expand-region nil)
-            ("w" beyond-mark-text-units nil)
-            ("x" ,ctl-x-map nil)
-            ;;("<SPC> <SPC>" set-mark-command nil)
-            ("r" beyond-toggle-mark nil)
-            ;; see later artrep nil definition
-            ("/" beyond-undo nil)
-            ;;("<SPC> z" ,(beyond-def-key-repeater "z" undo-tree-redo) nil)
-            ("<SPC>" beyond-next-state nil)
-            ("<backspace>" delete-backward-char nil)
-            ("a" embark-act nil)
-            ("?" (which-key-show-keymap (beyond--buffer-active-state-map)))
-            ("(" beyond-dilate-region "Dialate with parentheses")
-            (")" beyond-erode-region "Erode with parentheses")
-            ))
-        (beyond-special-state-map
-         . (("x" ,ctl-x-map "C-x")))
-        (beyond-minimal-motion-state-map
-         ;; should only be right-handed
-         . (("\\" beyond-quote-keypress nil)
-            ("i" scroll-down-command nil)
-            ("o" scroll-up-command nil)
-            ("O" scroll-other-window nil)
-            ("I" scroll-other-window-down nil)))
-        (beyond-motion-state-map
-         ;; should only be right-handed
-         . (("c" beyond--read-key-sequence-control-swapped nil)
-            ("g" beyond-goto-map nil)
-            ("'" pointless-jump-sexp nil)
-            (";" pointless-jump-word-beginning nil)
-            ("j" pointless-jump-char-timeout nil)
-            ("." xref-find-definitions nil)
-            ("M-." xref-find-definitions-other-window nil)
-            ("," xref-pop-marker-stack nil)
-            ("k" backward-char nil)
-            ("l" forward-char nil)
-            ("h" isearch-forward nil)
-            ("H" (:tap consult-ripgrep
-                       ("f" projectile-find-file)))
-            ("u" (:tap pointless-jump-beginning-of-line ("p" beyond-back-to-indentation-or-beginning-of-line)))
-            ("p" (:tap pointless-jump-end-of-line ("p" end-of-line)))
-            ("n" (:tap nil ("n" exchange-point-and-mark) ("m" pointless-jump-mark)))
-            ))))
+    . (("q" quoted-insert "Insert char")
+       ("s" beyond-smart-hungry-delete nil)
+       ("d" kill-region)
+       ("y" yank nil)
+       ("e" er/expand-region nil)
+       ("w" beyond-mark-text-units nil)
+       ("x" ,ctl-x-map nil)
+       ;;("<SPC> <SPC>" set-mark-command nil)
+       ("r" beyond-toggle-mark nil)
+       ;; see later artrep nil definition
+       ("/" beyond-undo nil)
+       ;;("<SPC> z" ,(beyond-def-key-repeater "z" undo-tree-redo) nil)
+       ("<SPC>" beyond-next-state nil)
+       ("<backspace>" delete-backward-char nil)
+       ("a" embark-act nil)
+       ("?" (which-key-show-keymap (beyond--buffer-active-state-map)))
+       ("(" beyond-dilate-region "Dialate with parentheses")
+       (")" beyond-erode-region "Erode with parentheses")
+       ;; fix aggressive-indent-mode fucking up symbol-replace
+       ("C-M-5" (let ((aggressive-indent-mode? aggressive-indent-mode))
+                  (aggressive-indent-mode -1)
+                  (call-interactively #'highlight-symbol-query-replace)
+                  (when aggressive-indent-mode?
+                    (aggressive-indent-mode))))
+       ))
+   (beyond-special-state-map
+    . (("x" ,ctl-x-map "C-x")))
+   (beyond-minimal-motion-state-map
+    ;; should only be right-handed
+    . (("\\" beyond-quote-keypress nil)
+       ("i" scroll-down-command nil)
+       ("o" scroll-up-command nil)
+       ("O" scroll-other-window nil)
+       ("I" scroll-other-window-down nil)))
+   (beyond-motion-state-map
+    ;; should only be right-handed
+    . (("c" beyond--read-key-sequence-control-swapped nil)
+       ("g" beyond-goto-map nil)
+       ("'" pointless-jump-sexp nil)
+       (";" pointless-jump-word-beginning nil)
+       ("j" pointless-jump-char-timeout nil)
+       ("J" pointless-resume nil)
+       ("C-j" pointless-repeat nil)
+       ("." xref-find-definitions nil)
+       ("M-." xref-find-definitions-other-window nil)
+       ("," xref-pop-marker-stack nil)
+       ("k" backward-char nil)
+       ("l" forward-char nil)
+       ("h" isearch-forward nil)
+       ("H" (:tap consult-ripgrep
+                  ("f" projectile-find-file)))
+       ("u" pointless-jump-beginning-of-line)
+       ("p" (:tap pointless-jump-end-of-line ("p" end-of-line)))
+       ("n" (:tap nil ("n" exchange-point-and-mark) ("m" pointless-jump-mark)))
+       ))))
 
 ;;(unbind-key ";" beyond-command-state-map )
 
