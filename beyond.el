@@ -1066,10 +1066,6 @@ region further.")
                             #'beginning-of-line))
 
 
-(define-key beyond-command-state-map (kbd "f") #'beyond-enter-insertion-state)
-(define-key beyond-insertion-state-map (kbd "C-g") #'beyond-exit-insertion-state)
-(define-key beyond-insertion-state-map (kbd "<escape>") #'beyond-exit-insertion-state)
-
 (defun beyond-kill-non-bol-trailing-whitespace ()
   "Kill whitespace after point unless at beginning of line."
   (save-excursion

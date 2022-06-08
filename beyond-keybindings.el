@@ -12,9 +12,12 @@
     ("p" previous-buffer "Previous buffer")
     ("n" next-buffer "Next Buffer"))
    (beyond-insertion-state-map
-    ("C-r" beyond-exit-insertion-state))
+    ("C-r" beyond-exit-insertion-state)
+    ("<escape>" beyond-exit-insertion-state))
    (beyond-command-state-map
-    . (("q" quoted-insert "Insert char")
+    . (("f" beyond-enter-insertion-state "Insert")
+       ;;("F" beyond-overwrite "Overwrite")
+       ("q" quoted-insert "Insert char")
        ("s" beyond-smart-hungry-delete nil)
        ("d" kill-region)
        ("y" yank nil)
