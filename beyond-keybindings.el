@@ -18,6 +18,8 @@
     . (("f" beyond-enter-insertion-state "Insert")
        ;;("F" beyond-overwrite "Overwrite")
        ("q" quoted-insert "Insert char")
+       ;; unbind insertion-state key
+       ("C-r" nil)
        ("s" beyond-smart-hungry-delete nil)
        ("d" kill-region)
        ("y" yank nil)
