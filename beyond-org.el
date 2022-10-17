@@ -42,7 +42,7 @@
          ("<tab>" (progn (org-back-to-heading) (org-cycle)) "Fold")
          ("<backtab>" (progn (org-back-to-heading) (org-shifttab)) "Global Fold")
          ("j" pointless-jump-org-headline "Jump Headline")
-         (";" org-convenience-heading-goto-title "Goto Title")
+         ("J" org-convenience-heading-goto-title "Goto Title")
          ("n" org-convenience-forward-heading-same-level-or-up-forward-heading-same-level "Next Headline")
          ("p" org-convenience-backward-heading-same-level-or-up-heading "Previous Headline")
          ("k" org-convenience-up-element-or-backward-heading "Up")
