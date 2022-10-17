@@ -40,7 +40,7 @@
        ("(" beyond-dilate-region "Dialate with parentheses")
        (")" beyond-erode-region "Erode with parentheses")
        ;; fix aggressive-indent-mode fucking up symbol-replace
-       ("C-M-5" (let ((aggressive-indent-mode? aggressive-indent-mode))
+       ("C-M-5" (let ((aggressive-indent-mode? (and (boundp 'aggressive-indent-mode) aggressive-indent-mode)))
                   (aggressive-indent-mode -1)
                   (call-interactively #'highlight-symbol-query-replace)
                   (when aggressive-indent-mode?
