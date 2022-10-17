@@ -24,6 +24,8 @@
        ("d" kill-region)
        ("y" yank nil)
        ("e" er/expand-region nil)
+       ("t" copilot-accept-completion)
+       ("T" copilot-accept-completion-by-word)
        ("w" beyond-mark-text-units nil)
        ("x" ,ctl-x-map nil)
        ;;("<SPC> <SPC>" set-mark-command nil)
