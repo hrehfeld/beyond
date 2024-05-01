@@ -23,7 +23,7 @@
        ("s" beyond-smart-hungry-delete nil)
        ("d" kill-region)
        ("y" yank nil)
-       ("e" er/expand-region nil)
+       ;;("e" er/expand-region nil)
        ("t" copilot-accept-completion)
        ("T" copilot-accept-completion-by-word)
        ("w" beyond-mark-text-units nil)
@@ -31,7 +31,7 @@
        ;;("<SPC> <SPC>" set-mark-command nil)
        ("r" beyond-toggle-mark nil)
        ;; see later artrep nil definition
-       ("/" beyond-undo nil)
+       ("/" undo nil)
        ;;("<SPC> z" ,(beyond-def-key-repeater "z" undo-tree-redo) nil)
        ("<SPC>" beyond-next-state nil)
        ("<backspace>" delete-backward-char nil)
@@ -59,9 +59,9 @@
     ;; should only be right-handed
     . (("c" beyond--read-key-sequence-control-swapped nil)
        ("g" beyond-goto-map nil)
-       ("'" pointless-jump-sexp nil)
-       (":" pointless-jump-word-beginning nil)
-       (";" pointless-jump-symbol-beginning nil)
+       (":" pointless-jump-sexp nil)
+       (";" next-line nil)
+       ("'" previous-line nil)
        ("j" pointless-jump-char-timeout nil)
        ("J" pointless-resume nil)
        ("C-j" pointless-repeat nil)
@@ -82,7 +82,7 @@
 
 
 (taps-def-double-tap-key beyond-motion-state-map "n" pointless-jump-mark exchange-point-and-mark)
-(taps-def-double-tap-key beyond-motion-state-map "b" pointfull-pop-local-mark pointfull-mark)
+(taps-def-double-tap-key beyond-motion-state-map "b" pointfull-mark pointfull-pop-local-mark)
 
 (taps-def-double-tap-key beyond-command-state-map "m" newline open-line)
 
