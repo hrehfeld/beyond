@@ -1037,9 +1037,9 @@ region further.")
 
 (defun beyond-toggle-mark ()
   (interactive)
-  (message "mark was %s at %s" (if mark-active "active" "inactive") (mark))
-  (let ((overlay (make-overlay (mark) (1+ (mark)))))
-    (overlay-put overlay 'face '(:background "red")))
+  ;;(message "mark was %s at %s" (if mark-active "active" "inactive") (mark))
+  ;; (let ((overlay (make-overlay (mark) (1+ (mark)))))
+  ;;   (overlay-put overlay 'face '(:background "red")))
   (if mark-active
       (progn
         (deactivate-mark t)
