@@ -1084,7 +1084,7 @@ region further.")
 (defun beyond-undo () (interactive)
        (let* ((prefix current-prefix-arg)
               (current-prefix-arg (list (if (use-region-p) 4 prefix))))
-         (call-interactively #'undo-tree-undo)))
+         (call-interactively #'undo)))
 
 
 (defun beyond-easy-bind (&optional bindings)
