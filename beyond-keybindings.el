@@ -21,7 +21,7 @@
        ;; unbind insertion-state key
        ("C-r" nil)
        ("s" beyond-smart-hungry-delete nil)
-       ("d" kill-region)
+       ("d" delete-char nil)
        ("y" yank nil)
        ;;("e" er/expand-region nil)
        ("t" copilot-accept-completion)
