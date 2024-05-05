@@ -655,7 +655,9 @@ the buffer changes."
   (let* ((keymap (make-composed-keymap
                   (let ((active-beyond-keymaps
                          (mapcar #'symbol-value
-                                 (mapcar #'cdr beyond-state-map-alist))))
+                                 (seq-concatenate 'list
+                                                  (mapcar #'cdr beyond-state-map-alist)
+                                                  (seq-mapcat #'cdr beyond--define-key--state-conditional--map-alist)))))
                     (seq-filter (lambda (keymap) (not (memq keymap active-beyond-keymaps)))
                                 (current-active-maps)))))
          (command (lookup-key keymap (vector key)))
