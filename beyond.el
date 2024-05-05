@@ -1112,7 +1112,7 @@ region further.")
 (defun beyond--define-key--state-conditional--update (state)
   (cl-check-type state symbol)
   ;; reset first
-  (message "beyond--define-key--state-conditional--update RESETTING %S" state)
+  ;;(message "beyond--define-key--state-conditional--update RESETTING %S" state)
   (cl-assert (boundp 'beyond--define-key--state-conditional--minor-mode-map-alist))
   (setq beyond--define-key--state-conditional--minor-mode-map-alist nil)
   (let ((state-active? (symbol-value state))
@@ -1128,9 +1128,9 @@ region further.")
                (if minor-mode
                    (when state-active?
                      (push mode-keymap beyond--define-key--state-conditional--minor-mode-map-alist)
-                     (message "beyond--define-key--state-conditional--update ADDING %S %S %S" state mode-keymap beyond--define-key--state-conditional--minor-mode-map-alist)
+                     ;;(message "beyond--define-key--state-conditional--update ADDING %S %S %S" state mode-keymap beyond--define-key--state-conditional--minor-mode-map-alist)
                      )
-                 (message "beyond--define-key--state-conditional--update NO MINOR MODE %S %S %S" state state-active? keymap-parent)
+                 ;;(message "beyond--define-key--state-conditional--update NO MINOR MODE %S %S %S" state state-active? keymap-parent)
                  )))))
 
 (defun beyond--define-key--state-conditional--switch-state-hook (state old-state)
@@ -1162,7 +1162,7 @@ region further.")
       ;; just remove from mapping
       (beyond--define-key-state-conditional-remove keymap key state)
     (when state
-      (message "beyond-define-key before wrapper %S %S %S %S" keymap key command state)
+      ;;(message "beyond-define-key before wrapper %S %S %S %S" keymap key command state)
       ;; create keymap for state + keymap
       (let ((map-name (beyond--define-key--state-conditional--map-name keymap state)))
 
