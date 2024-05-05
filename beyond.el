@@ -556,7 +556,7 @@ return a beyond state to switch to or nil."
   )
 
 ;; make modeline lighter update after each state switch
-(add-hook 'beyond-state-switch-hook #'force-mode-line-update)
+(add-hook 'beyond-state-switch-hook (lambda (&optional state old-state) (force-mode-line-update)))
 
 
 (defun beyond-mode--initialize ()
