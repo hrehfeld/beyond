@@ -538,7 +538,10 @@ return a beyond state to switch to or nil."
       (unless (minibufferp)
         ;; save original cursor
         (setq beyond--original-cursor (cons cursor-type (frame-parameter nil 'cursor-color)))
+        (cl-delete 'beyond-state-map-alist emulation-mode-map-alists)
         (cl-pushnew 'beyond-state-map-alist-for-emulation-mode-map-alists emulation-mode-map-alists)
+        (cl-delete 'beyond--define-key--state-conditional--minor-mode-map-alist emulation-mode-map-alists)
+        (cl-pushnew 'beyond--define-key--state-conditional--minor-mode-map-alist emulation-mode-map-alists)
         ;; update the emulation keymaps everytime so that any change is catched by turning it off
         ;; and on again
         (setq beyond-state-map-alist-for-emulation-mode-map-alists
@@ -549,7 +552,6 @@ return a beyond state to switch to or nil."
         (setq beyond--buffer-command-state (beyond--find-command-buffer-state))
         (beyond--switch-state
          (beyond-initial-state)))
-    (cl-delete 'beyond-state-map-alist emulation-mode-map-alists)
     (setq cursor-type (car beyond--original-cursor))
     (set-frame-parameter nil 'cursor-color (cdr beyond--original-cursor))
     (setq beyond--original-cursor (list cursor-type (frame-parameter nil 'cursor-color))))
@@ -1093,6 +1095,93 @@ region further.")
               (current-prefix-arg (list (if (use-region-p) 4 prefix))))
          (call-interactively #'undo)))
 
+(defvar beyond--define-key--state-conditional--map-alist nil
+  "Alist of `(STATE KEYMAP-SYMBOL ...)' that should be turned on and off in `emulation-mode-map-alists' on state switches.")
+;; (setq beyond--define-key--state-conditional--map-alist nil)
+
+(defvar beyond--define-key--state-conditional--minor-mode-map-alist nil
+  "Alist like `minor-mode-map-alist' but for conditional bindings. Should be added to `emulation-mode-map-alists'")
+;; (setq beyond--define-key--state-conditional--minor-mode-map-alist nil)
+
+(defun beyond--minor-mode-from-keymap (keymap)
+  "Return the minor mode symbol for KEYMAP from `minor-mode-map-alist'. Return nil if not found."
+  (cl-loop for (minor-mode . map) in minor-mode-map-alist
+           if (equal map keymap)
+           return minor-mode))
+
+(defun beyond--define-key--state-conditional--update (state)
+  (cl-check-type state symbol)
+  ;; reset first
+  (message "beyond--define-key--state-conditional--update RESETTING %S" state)
+  (cl-assert (boundp 'beyond--define-key--state-conditional--minor-mode-map-alist))
+  (setq beyond--define-key--state-conditional--minor-mode-map-alist nil)
+  (let ((state-active? (symbol-value state))
+        (conditional-keymaps (alist-get state beyond--define-key--state-conditional--map-alist)))
+    ;; add back relevant keymaps
+    (cl-loop for keymap in conditional-keymaps
+             do
+             ;; first, retrieve the minor mode name by looking up the keymap parent in minor-mode-map-alist
+             (let* ((keymap-value (symbol-value keymap))
+                    (keymap-parent (keymap-parent keymap-value))
+                    (minor-mode (beyond--minor-mode-from-keymap keymap-parent))
+                    (mode-keymap (cons minor-mode keymap-value)))
+               (if minor-mode
+                   (when state-active?
+                     (push mode-keymap beyond--define-key--state-conditional--minor-mode-map-alist)
+                     (message "beyond--define-key--state-conditional--update ADDING %S %S %S" state mode-keymap beyond--define-key--state-conditional--minor-mode-map-alist)
+                     )
+                 (message "beyond--define-key--state-conditional--update NO MINOR MODE %S %S %S" state state-active? keymap-parent)
+                 )))))
+
+(defun beyond--define-key--state-conditional--switch-state-hook (state old-state)
+  (cl-check-type state symbol)
+  ;; ;; remove other bindings first
+  ;; (when old-state
+  ;;   (beyond--define-key--state-conditional--update old-state))
+  (beyond--define-key--state-conditional--update state))
+(add-hook 'beyond-state-switch-hook #'beyond--define-key--state-conditional--switch-state-hook)
+;;(remove-hook 'beyond-state-switch-hook #'beyond--define-key--state-conditional--switch-state-hook)
+
+(defun beyond--define-key--state-conditional--window-state-change-hook ()
+  (when beyond--buffer-active-state
+    (beyond--define-key--state-conditional--update beyond--buffer-active-state)))
+(add-hook 'window-state-change-hook #'beyond--define-key--state-conditional--window-state-change-hook)
+;;(remove-hook 'window-state-change-hook #'beyond--define-key--state-conditional--window-state-change-hook)
+
+(defun beyond--define-key--state-conditional--map-name (keymap state)
+  (intern (format "beyond--define-key--state-conditional--map--%s--%s" state keymap)))
+
+(defun beyond-define-key (keymap key command &optional remove state)
+  "Like `define-key', but also add hooks to add/remove the keybinding when `STATE' is entered/exited respectively.
+
+`KEYMAP', `KEY', `COMMAND' are the same as for `define-key'.'"
+  (cl-check-type keymap symbol)
+  ;;(cl-check-type key key-valid)
+  (cl-check-type state (or null symbol) "is not a symbol or nil %S")
+  (if remove
+      ;; just remove from mapping
+      (beyond--define-key-state-conditional-remove keymap key state)
+    (when state
+      (message "beyond-define-key before wrapper %S %S %S %S" keymap key command state)
+      ;; create keymap for state + keymap
+      (let ((map-name (beyond--define-key--state-conditional--map-name keymap state)))
+
+        (set map-name
+             (let ((map (or
+                         ;; either already exists
+                         (and (boundp map-name) (symbol-value map-name))
+                         ;; or create new map
+                         (make-sparse-keymap))))
+               ;; set parent either way (shouldn't be necessary, but useful during dev)
+               (set-keymap-parent map (symbol-value keymap))
+               map))
+        (cl-pushnew map-name (alist-get state beyond--define-key--state-conditional--map-alist))
+        (setq keymap map-name))
+      )
+    ;; define key either in original keymap or state conditional keymap
+    (define-key (symbol-value keymap) key command remove)))
+
+
 (defun beyond--parse-define-key-def (keymap-sym key def)
 (cond ((and (symbolp def)
             (boundp def)
@@ -1139,6 +1228,48 @@ region further.")
                             (define-key map (kbd key) nil 'remove)
                             )
                           ))))))
+
+
+(defun beyond--parse-keywords-and-rest (args)
+  "Parse ARGS into a list of keywords and the associated value after the keyword, and the rest of the list elements.
+
+Return value is a list of the form (:rest REST . ARGS)."
+  (cl-check-type args list)
+  (let (rest in-keyword)
+    (cl-loop
+     for arg in args
+     do
+     (if in-keyword
+         (setq in-keyword nil)
+       (if (keywordp arg)
+           (setq in-keyword arg)
+         (push arg rest)))
+     finally (return (cons :rest (cons (nreverse rest) args))))))
+
+(defun beyond-bind (map-bindings)
+  (interactive)
+  (cl-loop
+   for map-binding in map-bindings
+   do
+   (let ((keymap (plist-get map-binding :map))
+         (state (plist-get map-binding :state))
+         (bindings (plist-get (beyond--parse-keywords-and-rest map-binding) :rest)))
+     (cl-check-type keymap symbol)
+     (cl-check-type state (or null symbol))
+     (cl-loop
+      for binding in bindings
+      do
+      (let* ((binding (beyond--parse-keywords-and-rest binding))
+             (desc (plist-get binding :desc))
+             (remove (plist-get binding :remove))
+             (rest (plist-get binding :rest))
+             (key (pop rest))
+             (command (pop rest))
+             (desc (or desc (when rest (pop rest))))
+             (define-key-args (list keymap (kbd key) command)))
+        ;;(message "binding %S %S %S %S %S: %S" keymap key command remove state binding)
+        (beyond-define-key keymap (kbd key) command remove state)
+        )))))
 
 
 ;; make insert mode automatically stop after idle time
