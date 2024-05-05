@@ -1093,6 +1093,32 @@ region further.")
               (current-prefix-arg (list (if (use-region-p) 4 prefix))))
          (call-interactively #'undo)))
 
+(defun beyond--parse-define-key-def (keymap-sym key def)
+(cond ((and (symbolp def)
+            (boundp def)
+            (keymapp (symbol-value def)))
+       (symbol-value def))
+      ((keymapp def)
+       def)
+      ((listp def)
+       (if (eq (car def) :tap)
+           (let ((base-command (cadr def))
+                 (commands (cddr def)))
+             (eval `(taps-def-taps
+                     ,base-command
+                     ,commands
+                     :timeout ,(if (length< commands 2) 0.3 0.5)
+                     :base-map ,keymap-sym :base-key ,key
+                     ) t))
+         ;; construct lambda
+         `(lambda () (interactive) ,def)))
+      (t
+       (progn
+         (cl-check-type def fbound "is not a function")
+         def))))
+
+(defun beyond--define-key-add-desc (def desc)
+  (if (and def desc) (cons (if (listp desc) (eval desc t) desc) def) def))
 
 (defun beyond-easy-bind (&optional bindings)
   (interactive)
@@ -1104,34 +1130,14 @@ region further.")
                         do
                         (progn
                           (if command
-                              (let* ((command (cond ((and (symbolp command)
-                                                          (boundp command)
-                                                          (keymapp (symbol-value command)))
-                                                     (symbol-value command))
-                                                    ((keymapp command)
-                                                     command)
-                                                    ((listp command)
-                                                     (if (eq (car command) :tap)
-                                                         (let ((base-command (cadr command))
-                                                               (commands (cddr command)))
-                                                           (eval `(taps-def-taps
-                                                                   ,base-command
-                                                                   ,commands
-                                                                   :timeout ,(if (length< commands 2) 0.3 0.5)
-                                                                  :base-map ,keymap-sym :base-key ,key
-                                                                  ) t))
-                                                         ;; construct lambda
-                                                         `(lambda () (interactive) ,command)))
-                                                    (t
-                                                     (progn
-                                                       (cl-check-type command fbound "is not a function")
-                                                       command))))
-                                     (command (if (and command desc) (cons (if (listp desc) (eval desc t) desc) command) command)))
+                              (let* ((command (beyond--parse-define-key-def keymap-sym key command))
+                                     (command (beyond--define-key-add-desc command desc)))
                                 (define-key map (kbd key) command))
                             ;; handle nil as command as an unbind, because (define-key ... nil) doesn't
                             ;; work for some reason
                             ;;(unbind-key (kbd key) map)
-                            (define-key map (kbd key) 'undefined))
+                            (define-key map (kbd key) nil 'remove)
+                            )
                           ))))))
 
 
