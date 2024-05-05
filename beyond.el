@@ -96,7 +96,7 @@ just a variable."
 ;; hook infrastructure
 (defvar beyond-state-switch-hook nil "Hook called when states are
 switched, before state hooks are run. Functions are called with
-the state symbol.
+the state symbol as the first and the previous state symbol as the second argument.
 
 Do NOT put blocking stuff here.")
 (defvar beyond-state-hooks nil
@@ -105,6 +105,7 @@ Do NOT put blocking stuff here.")
   "Alist of `(STATE-SYM . HOOK-SYM)' called when exiting `STATE'")
 
 (defun beyond--run-state-hook (state &optional exit?)
+  "Run state hooks for `STATE', and also parent state's hooks."
   (cl-check-type state symbol)
   (cl-loop while state
            do (progn
@@ -159,6 +160,12 @@ Do NOT put blocking stuff here.")
   (alist-get beyond--buffer-active-state beyond-state-map-alist))
 
 (defmacro beyond-def-state-map (map-name &optional state parent-map supress?)
+  "Define a keymap for a state.
+
+`MAP-NAME' is the symbol for the keymap.
+`STATE' is the symbol for the state.
+`PARENT-MAP' is the symbol for the parent keymap.
+`SUPRESS?' is a boolean to suppress keymap using `suppress-keymap'."
   (cl-check-type map-name symbol)
   (cl-check-type state symbol)
   (cl-check-type parent-map (or null symbol))
