@@ -1271,7 +1271,8 @@ Return value is a list of the form (:rest REST . ARGS)."
              (define-key-args (list keymap (kbd key) command)))
         ;;(message "binding %S %S %S %S %S: %S" keymap key command remove state binding)
         (beyond-define-key keymap (kbd key) command remove state)
-        )))))
+        ))))
+  t)
 
 
 ;; make insert mode automatically stop after idle time
