@@ -139,7 +139,7 @@ Do NOT put blocking stuff here.")
       (beyond--state-set state t)
       (beyond--sanity-check)
       (beyond-debug hook (message "beyond--switch-state: running %S" state))
-      (run-hook-with-args 'beyond-state-switch-hook state)
+      (run-hook-with-args 'beyond-state-switch-hook state old-state)
       (beyond--run-state-hook state)
       ))
   (beyond--sanity-check)
@@ -352,7 +352,7 @@ See `set-cursor-color'."
   :group 'beyond :type 'sexp)
 
 
-(defun beyond-update-cursor (&optional state)
+(defun beyond-update-cursor (&optional state old-state)
   "Update the cursor depending on the current beyond state.
 
 Cursor will be set for all active states, overwriting
