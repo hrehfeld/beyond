@@ -374,6 +374,7 @@ previous cursor settings.
 ;; (beyond-update-cursor)
 (add-hook 'buffer-list-update-hook #'beyond-update-cursor)
 (add-hook 'beyond-state-switch-hook #'beyond-update-cursor)
+(add-hook 'post-command-hook #'beyond-update-cursor)
 
 ;; (defun beyond-interactive-insert (&rest args)
 ;;   "Beyond insert commands must call this function after `interactive'.
