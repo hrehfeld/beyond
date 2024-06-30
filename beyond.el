@@ -9,6 +9,7 @@
 
 (require 'cl-macs)
 (require 'dash)
+(require 'advice)
 (require 'subr-x)
 
 (defgroup beyond nil "Beyond" :group 'Editing)
@@ -1181,8 +1182,20 @@ region further.")
         (cl-pushnew map-name (alist-get state beyond--define-key--state-conditional--map-alist))
         (setq keymap map-name))
       )
-    ;; define key either in original keymap or state conditional keymap
-    (define-key (symbol-value keymap) key command remove)))
+    ;; check if command needs to be converted to lambda
+    ;; is a list and not a lambda
+    (let ((command (if (and (listp command)
+                            (not (ad-lambda-p command)))
+                       (let ((lambdafied `(lambda ()
+                                            (interactive)
+                                            ,command)))
+                         (progn ;;(message "%S => %S" command lambdafied)
+                                (eval `(lambda ()
+                                         (interactive)
+                                         ,command))))
+                     command)))
+      ;; define key either in original keymap or state conditional keymap
+      (define-key (symbol-value keymap) key command remove))))
 
 
 (defun beyond--parse-define-key-def (keymap-sym key def)
