@@ -335,23 +335,39 @@ See `set-cursor-color'."
 ;;(toggle-debug-on-error)
 
 (require 'color)
+
+(defun beyond-color-hex-from-hsl (h s l)
+  (apply #'color-rgb-to-hex (color-hsl-to-rgb h s l)))
+;;(beyond-color-hex-from-hsl 0 0.5 0.5)
+
 (defun beyond-color-for-string (str sat val)
-	(let* ((hue (string-to-number (substring (md5 str) 0 8) 16))
+	(let* ((hue (string-to-number (substring (sha1 str) 0 8) 16))
 				 (hue (/ (mod hue 256) 255.0)))
-		(apply #'color-rgb-to-hex (color-hsl-to-rgb hue sat val))))
+		(funcall #'beyond-color-hex-from-hsl hue sat val)))
+;; (beyond-color-for-string "test" 0.5 0.5)
+
 (defun beyond-theme-is-light? ()
   (eq 'light (frame-parameter nil 'background-mode)))
 
-(defcustom beyond-cursor-color-saturation 0.9
-  "Saturation for generated cursor colors."
+(defcustom beyond-color-cursor-saturation-max 0.7
+  "Max saturation for generated cursor colors."
   :group 'beyond :type 'sexp)
-(defcustom beyond-cursor-color-value-light 0.3
-  "Color value (brightness) for generated cursor colors on light backgrounds."
-  :group 'beyond :type 'sexp)
-(defcustom beyond-cursor-color-value-dark 0.7
-  "Color value (brightness) for generated cursor colors on dark backgrounds."
+(defcustom beyond-color-cursor-saturation-min 0.4
+  "Min saturation for generated cursor colors."
   :group 'beyond :type 'sexp)
 
+(defcustom beyond-color-cursor-value-lightness-max 0.7
+  "Max lightness for generated cursor colors."
+  :group 'beyond :type 'sexp)
+(defcustom beyond-color-cursor-value-lightness-min 0.4
+  "Min lightness for generated cursor colors."
+  :group 'beyond :type 'sexp)
+
+
+(defun beyond-color-extract-hsl (color)
+  (let* ((rgb (color-name-to-rgb color)))
+    (apply #'color-rgb-to-hsl rgb)))
+;; (beyond-color-extract-hsl "#f0f")
 
 (defun beyond-update-cursor (&optional state old-state)
   "Update the cursor depending on the current beyond state.
@@ -360,22 +376,84 @@ Cursor will be set for all active states, overwriting
 previous cursor settings.
 "
   (with-current-buffer (window-buffer)
-    (let ((state (or state beyond--buffer-active-state)))
-      (let ((type (alist-get state beyond-cursor-types))
-            (color (alist-get state beyond-cursor-colors)))
-        (beyond-debug cursor (message "beyond-update-cursor %S %S in %s with %S" type color (buffer-name) state))
-        (setq cursor-type (or type beyond-cursor-type-default))
-        (let ((color (or color
-                         (beyond-color-for-string
-                          (symbol-name state)
-                          beyond-cursor-color-saturation
-                          (if (beyond-theme-is-light?) beyond-cursor-color-value-light beyond-cursor-color-value-dark)))))
-          (set-cursor-color color))
-        ))))
+    (with-demoted-errors "beyond-update-cursor: %S"
+      (let ((state (or state beyond--buffer-active-state)))
+        (let ((type (alist-get state beyond-cursor-types))
+              (color (alist-get state beyond-cursor-colors)))
+          (let ((color (let* ((cursor-color (beyond-color-extract-hsl (face-attribute 'cursor :background)))
+                              (s (nth 1 cursor-color))
+                              (l (nth 2 cursor-color))
+                              (saturation-lightness
+                               (list (min (max s beyond-color-cursor-saturation-min) beyond-color-cursor-saturation-max)
+                                     (min (max l beyond-color-cursor-value-lightness-min) beyond-color-cursor-value-lightness-max))
+
+                               ))
+                         (beyond-debug 'cursor (message "cursor-color %S %S %S" cursor-color state saturation-lightness))
+                         (if color
+                             (apply #'beyond-color-hex-from-hsl (car (beyond-color-extract-hsl color)) saturation-lightness)
+                           (apply #'beyond-color-for-string
+                                  (cons
+                                   (symbol-name state)
+                                   ;;beyond-cursor-color-saturation
+                                   ;;(if (beyond-theme-is-light?) beyond-cursor-color-value-light beyond-cursor-color-value-dark)))))
+                                   saturation-lightness)
+                                  ))
+                         )))
+            (beyond-debug cursor (message "beyond-update-cursor %S %S in %s (on frame %s) with %S"
+                                          type color (buffer-name)
+                                          (frame-parameter nil 'width)
+                                          state))
+            (setq cursor-type (or type beyond-cursor-type-default))
+            (set-cursor-color color))
+          )))))
 ;; (beyond-update-cursor)
-(add-hook 'buffer-list-update-hook #'beyond-update-cursor)
-(add-hook 'beyond-state-switch-hook #'beyond-update-cursor)
-(add-hook 'post-command-hook #'beyond-update-cursor)
+
+
+
+
+(defvar beyond--update-cursor-scheduled? nil "Is a cursor update scheduled?")
+
+(defun beyond-update-cursor-scheduled ()
+  "Run a scheduled cursor update."
+  (when beyond--update-cursor-scheduled?
+    (setq beyond--update-cursor-scheduled? nil)
+    (beyond-update-cursor)))
+
+(defun beyond-update-cursor-schedule (&optional state old-state)
+  "Schedule a cursor update."
+  (setq beyond--update-cursor-scheduled? t)
+  (run-with-idle-timer beyond-cursor-mode-update-time nil #'beyond-update-cursor-scheduled))
+
+
+(defcustom beyond-cursor-mode-idle-time 0.1
+  "Time in seconds to wait before updating the cursor regularly."
+  :group 'beyond :type 'sexp)
+
+(defcustom beyond-cursor-mode-update-time 0.01
+  "Time in seconds to wait before updating the cursor after a command."
+  :group 'beyond :type 'sexp)
+
+
+
+(defvar beyond--cursor-mode-timer nil "Timer for updating the cursor.")
+
+(define-minor-mode beyond-cursor-mode
+  "Minor mode to update the cursor depending on the current beyond state."
+  :lighter nil
+  (if beyond-cursor-mode
+      (progn
+        (add-hook 'buffer-list-update-hook #'beyond-update-cursor-schedule)
+        (add-hook 'beyond-state-switch-hook #'beyond-update-cursor-schedule)
+        (add-hook 'post-command-hook #'beyond-update-cursor-schedule)
+        (setq beyond--cursor-mode-timer (run-with-idle-timer beyond-cursor-mode-idle-time t #'beyond-update-cursor-scheduled))
+        )
+    (remove-hook 'buffer-list-update-hook #'beyond-update-cursor-schedule)
+    (remove-hook 'beyond-state-switch-hook #'beyond-update-cursor-schedule)
+    (remove-hook 'post-command-hook #'beyond-update-cursor-schedule)
+    (cancel-timer beyond--cursor-mode-timer)
+    (setq beyond--cursor-mode-timer nil)
+    ))
+
 
 ;; (defun beyond-interactive-insert (&rest args)
 ;;   "Beyond insert commands must call this function after `interactive'.
