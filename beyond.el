@@ -1233,6 +1233,8 @@ region further.")
     (beyond--define-key--state-conditional--update beyond--buffer-active-state)))
 (add-hook 'window-state-change-hook #'beyond--define-key--state-conditional--window-state-change-hook)
 ;;(remove-hook 'window-state-change-hook #'beyond--define-key--state-conditional--window-state-change-hook)
+(add-hook 'post-command-hook #'beyond--define-key--state-conditional--window-state-change-hook)
+;;(remove-hook 'post-command-hook #'beyond--define-key--state-conditional--window-state-change-hook)
 
 (defun beyond--define-key--state-conditional--map-name (keymap state)
   (intern (format "beyond--define-key--state-conditional--map--%s--%s" state keymap)))
