@@ -1199,21 +1199,24 @@ region further.")
   (cl-assert (boundp 'beyond--define-key--state-conditional--minor-mode-map-alist))
   (setq beyond--define-key--state-conditional--minor-mode-map-alist nil)
   (let ((state-active? (symbol-value state))
-        (conditional-keymaps (alist-get state beyond--define-key--state-conditional--map-alist)))
+        (conditional-keymap-symbols (alist-get state beyond--define-key--state-conditional--map-alist)))
     ;; add back relevant keymaps
-    (cl-loop for keymap in conditional-keymaps
+    (cl-loop for conditional-keymap-sym in conditional-keymap-symbols
              do
+             (cl-check-type conditional-keymap-sym symbol)
              ;; first, retrieve the minor mode name by looking up the keymap parent in minor-mode-map-alist
-             (let* ((keymap-value (symbol-value keymap))
-                    (keymap-parent (keymap-parent keymap-value))
-                    (minor-mode (beyond--minor-mode-from-keymap keymap-parent))
-                    (mode-keymap (cons minor-mode keymap-value)))
-               (if minor-mode
+             (let* ((conditional-keymap (symbol-value conditional-keymap-sym))
+                    (conditional-keymap-parent (keymap-parent conditional-keymap))
+                    (conditional-minor-mode (beyond--minor-mode-from-keymap conditional-keymap-parent))
+                    (minor-mode-map-entry (cons conditional-minor-mode conditional-keymap)))
+               (if conditional-minor-mode
                    (when state-active?
-                     (push mode-keymap beyond--define-key--state-conditional--minor-mode-map-alist)
-                     ;;(message "beyond--define-key--state-conditional--update ADDING %S %S %S" state mode-keymap beyond--define-key--state-conditional--minor-mode-map-alist)
-                     )
-                 ;;(message "beyond--define-key--state-conditional--update NO MINOR MODE %S %S %S" state state-active? keymap-parent)
+                     (push minor-mode-map-entry beyond--define-key--state-conditional--minor-mode-map-alist)
+                     (message "beyond--define-key--state-conditional--update ADDING %S %S"
+                              state
+                              conditional-minor-mode
+                              ))
+                 (message "beyond--define-key--state-conditional--update NO MINOR MODE %S %S %S" state state-active? conditional-keymap-parent)
                  )))))
 
 (defun beyond--define-key--state-conditional--switch-state-hook (state old-state)
