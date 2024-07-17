@@ -440,6 +440,7 @@ previous cursor settings.
 (define-minor-mode beyond-cursor-mode
   "Minor mode to update the cursor depending on the current beyond state."
   :lighter nil
+  :global t
   (if beyond-cursor-mode
       (progn
         (add-hook 'buffer-list-update-hook #'beyond-update-cursor-schedule)
