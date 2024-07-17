@@ -1212,11 +1212,12 @@ region further.")
                (if conditional-minor-mode
                    (when state-active?
                      (push minor-mode-map-entry beyond--define-key--state-conditional--minor-mode-map-alist)
-                     (message "beyond--define-key--state-conditional--update ADDING %S %S"
-                              state
-                              conditional-minor-mode
-                              ))
-                 (message "beyond--define-key--state-conditional--update NO MINOR MODE %S %S %S" state state-active? conditional-keymap-parent)
+                     ;; (message "beyond--define-key--state-conditional--update ADDING %S %S"
+                     ;;          state
+                     ;;          conditional-minor-mode
+                     ;;          )
+                     )
+                 ;; (message "beyond--define-key--state-conditional--update NO MINOR MODE %S %S %S" state state-active? conditional-keymap-parent)
                  )))))
 
 (defun beyond--define-key--state-conditional--switch-state-hook (state old-state)
