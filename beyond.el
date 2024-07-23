@@ -1284,28 +1284,46 @@ region further.")
 
 
 (defun beyond--parse-define-key-def (keymap-sym key def)
-(cond ((and (symbolp def)
-            (boundp def)
-            (keymapp (symbol-value def)))
-       (symbol-value def))
-      ((keymapp def)
-       def)
-      ((listp def)
-       (if (eq (car def) :tap)
-           (let ((base-command (cadr def))
-                 (commands (cddr def)))
-             (eval `(taps-def-taps
-                     ,base-command
-                     ,commands
-                     :timeout ,(if (length< commands 2) 0.3 0.5)
-                     :base-map ,keymap-sym :base-key ,key
-                     ) t))
-         ;; construct lambda
-         `(lambda () (interactive) ,def)))
-      (t
-       (progn
-         (cl-check-type def fbound "is not a function")
-         def))))
+  "Check DEF and convert it to something that can be bound if necessary.
+
+DEF can be:
+- a symbol to a keymap, which will return the keymap,
+- a keymap, which will just return the keymap,
+- a cons/non-empty list, which will be checked if it's a tap definition:
+  - a tap definition looks like:
+    `(:tap base-command (key1 command1) (key2 command2) ...)',
+  - or otherwise will be converted to a lambda command."
+  (cond
+   ;; def is a symbol to a keymap
+   ((and (symbolp def)
+         (boundp def)
+         (keymapp (symbol-value def)))
+    ;; return the keymap
+    (symbol-value def))
+   ;; def is a keymap
+   ((keymapp def)
+    ;; just return the keymap
+    def)
+   ;; def is a cons/non-empty list
+   ((consp def)
+    ;; check if it's a tap definition
+    ;; a tap definition is `(:tap base-command (key1 command1) (key2 command2) ...)'
+    (if (eq (car def) :tap)
+        (let ((base-command (cadr def))
+              (commands (cddr def)))
+          (eval `(taps-def-taps
+                  ,base-command
+                  ,commands
+                  :timeout ,(if (length< commands 2) 0.3 0.5)
+                  :base-map ,keymap-sym :base-key ,key
+                  ) t))
+      ;; otherwise construct lambda
+      `(lambda () (interactive) ,def)))
+   ;; warn otherwise
+   (t
+    (progn
+      (cl-check-type def fbound "is not a function")
+      def))))
 
 (defun beyond--define-key-add-desc (def desc)
   (if (and def desc) (cons (if (listp desc) (eval desc t) desc) def) def))
