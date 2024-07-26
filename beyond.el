@@ -1190,7 +1190,7 @@ region further.")
   "Alist of `(STATE KEYMAP-SYMBOL ...)' that should be turned on and off in `emulation-mode-map-alists' on state switches.")
 ;; (setq beyond--define-key--state-conditional--map-alist nil)
 
-(defvar beyond--define-key--state-conditional--minor-mode-map-alist nil
+(defvar-local beyond--define-key--state-conditional--minor-mode-map-alist nil
   "Alist like `minor-mode-map-alist' but for conditional bindings. Should be added to `emulation-mode-map-alists'")
 ;; (setq beyond--define-key--state-conditional--minor-mode-map-alist nil)
 
