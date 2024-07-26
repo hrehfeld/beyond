@@ -1322,7 +1322,7 @@ DEF can be:
    ;; warn otherwise
    (t
     (progn
-      (cl-check-type def fbound "is not a function")
+      (cl-check-type def function "is not a function")
       def))))
 
 (defun beyond--define-key-add-desc (def desc)
