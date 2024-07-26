@@ -1237,39 +1237,44 @@ region further.")
 (add-hook 'post-command-hook #'beyond--define-key--state-conditional--window-state-change-hook)
 ;;(remove-hook 'post-command-hook #'beyond--define-key--state-conditional--window-state-change-hook)
 
-(defun beyond--define-key--state-conditional--map-name (keymap state)
-  (intern (format "beyond--define-key--state-conditional--map--%s--%s" state keymap)))
+(defun beyond--define-key--state-conditional--keymap-name (keymap state)
+  "Return the auto-generated name for the conditional keymap for `KEYMAP' when `STATE' is active."
+  (intern (format "beyond--define-key--state-conditional--keymap--%s--%s" state keymap)))
 
-(defun beyond-define-key (keymap key command &optional remove state)
-  "Like `define-key', but also add hooks to add/remove the keybinding when `STATE' is entered/exited respectively.
+(defun beyond-define-key (keymap-sym key command &optional remove state)
+  "Like `define-key', but also setup the keybinding to be toggled when `STATE' is entered/exited.
 
-`KEYMAP', `KEY', `COMMAND' are the same as for `define-key'.'"
-  (cl-check-type keymap symbol)
+`KEYMAP-SYM', `KEY', `COMMAND' are the same as for `define-key'.
+
+With `REMOVE', just remove the keybinding and hook setup."
+  (cl-check-type keymap-sym symbol)
   ;;(cl-check-type key key-valid)
   (cl-check-type state (or null symbol) "is not a symbol or nil %S")
   (if remove
       ;; just remove from mapping
-      (beyond--define-key-state-conditional-remove keymap key state)
+      (beyond--define-key-state-conditional-remove keymap-sym key state)
+    ;; otherwise add the keybinding
     (when state
-      ;;(message "beyond-define-key before wrapper %S %S %S %S" keymap key command state)
-      ;; create keymap for state + keymap
-      (let ((map-name (beyond--define-key--state-conditional--map-name keymap state)))
+      ;;(message "beyond-define-key before wrapper %S %S %S %S" keymap-sym key command state)
+      ;; create keymap for state + keymap-sym
+      (let ((conditional-keymap-sym (beyond--define-key--state-conditional--keymap-name keymap-sym state)))
 
-        (set map-name
+        (set conditional-keymap-sym
              (let ((map (or
                          ;; either already exists
-                         (and (boundp map-name) (symbol-value map-name))
+                         (and (boundp conditional-keymap-sym) (symbol-value conditional-keymap-sym))
                          ;; or create new map
                          (make-sparse-keymap))))
                ;; set parent either way (shouldn't be necessary, but useful during dev)
-               (set-keymap-parent map (symbol-value keymap))
+               (set-keymap-parent map (symbol-value keymap-sym))
                map))
-        (cl-pushnew map-name (alist-get state beyond--define-key--state-conditional--map-alist))
-        (setq keymap map-name))
-      )
-    ;; check if command needs to be converted to lambda
-    ;; is a list and not a lambda
-    (let ((command (if (and (listp command)
+        (cl-pushnew conditional-keymap-sym (alist-get state beyond--define-key--state-conditional--map-alist))
+        (setq keymap-sym conditional-keymap-sym)))
+    ;; now define the key
+    (let ((command
+           ;; check if command needs to be converted to lambda
+           ;; is a list and not a lambda
+           (if (and (listp command)
                             (not (ad-lambda-p command)))
                        (let ((lambdafied `(lambda ()
                                             (interactive)
@@ -1280,7 +1285,7 @@ region further.")
                                          ,command))))
                      command)))
       ;; define key either in original keymap or state conditional keymap
-      (define-key (symbol-value keymap) key command remove))))
+      (define-key (symbol-value keymap-sym) key command remove))))
 
 
 (defun beyond--parse-define-key-def (keymap-sym key def)
