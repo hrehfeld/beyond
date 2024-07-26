@@ -1237,13 +1237,13 @@ region further.")
 (add-hook 'beyond-state-switch-hook #'beyond--define-key--state-conditional--switch-state-hook)
 ;;(remove-hook 'beyond-state-switch-hook #'beyond--define-key--state-conditional--switch-state-hook)
 
-(defun beyond--define-key--state-conditional--window-state-change-hook ()
+(defun beyond--define-key--state-conditional--update-hook ()
   (when beyond--buffer-active-state
     (beyond--define-key--state-conditional--update beyond--buffer-active-state)))
-(add-hook 'window-state-change-hook #'beyond--define-key--state-conditional--window-state-change-hook)
-;;(remove-hook 'window-state-change-hook #'beyond--define-key--state-conditional--window-state-change-hook)
-(add-hook 'post-command-hook #'beyond--define-key--state-conditional--window-state-change-hook)
-;;(remove-hook 'post-command-hook #'beyond--define-key--state-conditional--window-state-change-hook)
+(add-hook 'window-state-change-hook #'beyond--define-key--state-conditional--update-hook)
+;;(remove-hook 'window-state-change-hook #'beyond--define-key--state-conditional--update-hook)
+(add-hook 'post-command-hook #'beyond--define-key--state-conditional--update-hook)
+;;(remove-hook 'post-command-hook #'beyond--define-key--state-conditional--update-hook)
 
 (defun beyond--define-key--state-conditional--keymap-name (keymap state)
   "Return the auto-generated name for the conditional keymap for `KEYMAP' when `STATE' is active."
