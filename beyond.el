@@ -1,5 +1,6 @@
 ;;; beyond-core.el --- An Ergonomic Command Mode  -*- lexical-binding: t -*-
 
+;;; Package-Requires: ((emacs "27.1") (dash "2.18.0") (kolor "0.1.0"))
 ;;; Commentary:
 
 ;; This module sets up the emulation keymaps for each beyond state.
@@ -11,6 +12,7 @@
 (require 'dash)
 (require 'advice)
 (require 'subr-x)
+(require 'kolor)
 
 (defgroup beyond nil "Beyond" :group 'Editing)
 
@@ -380,7 +382,11 @@ previous cursor settings.
       (let ((state (or state beyond--buffer-active-state)))
         (let ((type (alist-get state beyond-cursor-types))
               (color (alist-get state beyond-cursor-colors)))
-          (let ((color (let* ((cursor-color (beyond-color-extract-hsl (face-attribute 'cursor :background)))
+          (let ((color (let* ((cursor-color
+                               (beyond-color-extract-hsl
+                                (cond ((kolor-is-emacs? (face-attribute 'cursor :background)))
+                                      ((kolor-is-emacs? (face-attribute 'default :foreground)))
+                                      (t (0.5 0.6 0.3)))))
                               (s (nth 1 cursor-color))
                               (l (nth 2 cursor-color))
                               (saturation-lightness
