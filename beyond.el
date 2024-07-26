@@ -1,5 +1,7 @@
 ;;; beyond-core.el --- An Ergonomic Command Mode  -*- lexical-binding: t -*-
 
+;; Author: Hauke Rehfeld
+;; URL: https://github.com/hrehfeld/beyond
 ;;; Package-Requires: ((emacs "27.1") (dash "2.18.0") (kolor "0.1.0"))
 ;;; Commentary:
 
