@@ -1215,18 +1215,20 @@ region further.")
              ;; first, retrieve the minor mode name by looking up the keymap parent in minor-mode-map-alist
              (let* ((conditional-keymap (symbol-value conditional-keymap-sym))
                     (conditional-keymap-parent (keymap-parent conditional-keymap))
-                    (conditional-minor-mode (beyond--minor-mode-from-keymap conditional-keymap-parent))
-                    (minor-mode-map-entry (cons conditional-minor-mode conditional-keymap)))
-               (if conditional-minor-mode
+                    (conditional-minor-mode-sym (beyond--minor-mode-from-keymap conditional-keymap-parent))
+                    (minor-mode-map-entry (cons conditional-minor-mode-sym conditional-keymap)))
+               (if (symbol-value conditional-minor-mode-sym)
                    (when state-active?
                      (push minor-mode-map-entry beyond--define-key--state-conditional--minor-mode-map-alist)
                      ;; (message "beyond--define-key--state-conditional--update ADDING %S %S"
                      ;;          state
-                     ;;          conditional-minor-mode
+                     ;;          conditional-minor-mode-sym
                      ;;          )
                      )
                  ;; (message "beyond--define-key--state-conditional--update NO MINOR MODE %S %S %S" state state-active? conditional-keymap-parent)
-                 )))))
+                 ))))
+  ;;(message "beyond--define-key--state-conditional--minor-mode-map-alist %S %S" (buffer-name (current-buffer)) beyond--define-key--state-conditional--minor-mode-map-alist)
+  )
 
 (defun beyond--define-key--state-conditional--switch-state-hook (state old-state)
   (cl-check-type state symbol)
