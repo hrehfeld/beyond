@@ -1216,16 +1216,15 @@ region further.")
              (let* ((conditional-keymap (symbol-value conditional-keymap-sym))
                     (conditional-keymap-parent (keymap-parent conditional-keymap))
                     (conditional-minor-mode-sym (beyond--minor-mode-from-keymap conditional-keymap-parent))
+                    (conditional-minor-mode-active (symbol-value conditional-minor-mode-sym))
                     (minor-mode-map-entry (cons conditional-minor-mode-sym conditional-keymap)))
-               (if (symbol-value conditional-minor-mode-sym)
-                   (when state-active?
-                     (push minor-mode-map-entry beyond--define-key--state-conditional--minor-mode-map-alist)
-                     ;; (message "beyond--define-key--state-conditional--update ADDING %S %S"
-                     ;;          state
-                     ;;          conditional-minor-mode-sym
-                     ;;          )
-                     )
-                 ;; (message "beyond--define-key--state-conditional--update NO MINOR MODE %S %S %S" state state-active? conditional-keymap-parent)
+               (progn;;if conditional-minor-mode-active
+                 (if state-active?
+                     (progn (push minor-mode-map-entry beyond--define-key--state-conditional--minor-mode-map-alist)
+                            ;;(message "beyond--define-key--state-conditional--update ACTIVE: %S %S" conditional-minor-mode-sym conditional-minor-mode-active)
+                            )
+                   ;; (message "beyond--define-key--state-conditional--update NOT ACTIVE: %S %S" conditional-minor-mode-sym conditional-minor-mode-active)
+                   )
                  ))))
   ;;(message "beyond--define-key--state-conditional--minor-mode-map-alist %S %S" (buffer-name (current-buffer)) beyond--define-key--state-conditional--minor-mode-map-alist)
   )
