@@ -47,7 +47,6 @@
                      (org-convenience-goto-heading-text)
                      (beyond-enter-insertion-state)) "Text & insert")
               ("j" pointless-jump-org-headline "Jump Headline")
-              ("H" my-org-rg-search "Ripgrep")
               ("J" (progn
                      (with-demoted-errors (org-convenience-heading-goto-title))
                      (message "entering insertion state")
