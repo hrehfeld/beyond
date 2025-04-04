@@ -1,4 +1,4 @@
-;;; beyond-core.el --- An Ergonomic Command Mode  -*- lexical-binding: t -*-
+;;; beyond.el --- An Ergonomic Command Mode  -*- lexical-binding: t -*-
 
 ;; Author: Hauke Rehfeld
 ;; URL: https://github.com/hrehfeld/beyond
@@ -1447,4 +1447,5 @@ Return value is a list of the form (:rest REST . ARGS)."
 
 
 (provide 'beyond)
-;;; beyond ends here
+
+;;; beyond.el ends here
