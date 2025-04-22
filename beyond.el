@@ -604,7 +604,9 @@ return a beyond state to switch to or nil."
   :group 'beyond :type '(list symbol))
 
 (defun beyond--buffer-start-in-insertion-state? ()
-  (beyond--find-buffer-state beyond-start-in-insertion-state?-selectors (mapcar (lambda (mode) (cons mode t)) beyond-start-in-insertion-state?-modes) nil))
+  (beyond--find-buffer-state
+     beyond-start-in-insertion-state?-selectors
+     (mapcar (lambda (mode) (cons mode t)) beyond-start-in-insertion-state?-modes) nil))
 
 
 ;;; Initialisation and activation
