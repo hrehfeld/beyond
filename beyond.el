@@ -19,13 +19,23 @@
 (defgroup beyond nil "Beyond" :group 'Editing)
 
 
+(defconst beyond-debug-buffer "*beyond-debug*" "Name of beyond debug message buffer")
+
 (defvar beyond-debug nil "A list of debug types to show messages for.")
-(defmacro beyond-debug (type &rest body)
-  ;;(message "beyond-debug %S %S %S" type (member type beyond-debug) beyond-debug)
-  `(when (memq ',type beyond-debug)
-     (progn ,@body)
-     ))
+(defun beyond-debug (type format-string &rest format-args)
+  (cl-check-type type symbol)
+  (cl-check-type format-string string)
+  (cl-check-type format-args list)
+  (when (memq type beyond-debug)
+    (let ((buffer-name (buffer-name))
+          (buf (get-buffer-create beyond-debug-buffer)))
+      (buffer-disable-undo buf)
+      (with-current-buffer buf
+        (save-excursion
+          (goto-char (point-max))
+          (insert (apply #'format (append (list (concat "beyond (%s) [%s]: " format-string "\n") type buffer-name) format-args))))))))
 ;;(setq beyond-debug '(hook mode))
+;;(setq-local beyond-debug '(hook mode))
 ;;(setq beyond-debug '(cursor))
 ;;(setq beyond-debug nil)
 ;;(beyond-debug hook t)
@@ -74,10 +84,10 @@ beyond-command-state before beyond-motion-state.")
 
 `STATE' can either be a minor-mode (if bound as a function symbol) or
 just a variable."
-  (beyond-debug mode (message "Switching variable for  %S to %S" state-sym state-val))
+  (beyond-debug 'mode "Switching variable for  %S to %S" state-sym state-val)
   (set state-sym state-val)
   (when (symbol-function state-sym)
-    (beyond-debug mode (message "calling function for %S" state-sym))
+    (beyond-debug 'mode  "calling function for %S" state-sym)
     ;; call minor mode if state has one
     (funcall state-sym (if state-val 1 -1))
     )
@@ -92,7 +102,7 @@ just a variable."
   ;; state's map is in the currently active keymaps
   (let* ((map-sym (intern (concat (symbol-name (beyond--buffer-active-state)) "-map")))
          (map (symbol-value map-sym)))
-    (beyond-debug mode (message "beyond--sanity-check: index of %S: %i" map-sym (cl-position map (current-active-maps))))
+    (beyond-debug 'sanity "beyond--sanity-check: index of %S: %i" map-sym (cl-position map (current-active-maps)))
     (cl-assert (member map (current-active-maps)) t)
     )
   t)
@@ -116,7 +126,7 @@ Do NOT put blocking stuff here.")
            do (progn
                 (let ((hook (alist-get state (if exit? beyond-state-exit-hooks beyond-state-hooks))))
                   (when hook
-                    (beyond-debug hook (message "beyond--run-state-hook: running hook %S" hook))
+                    (beyond-debug 'hook "beyond--run-state-hook: running hook %S" hook)
                     (run-hook-with-args hook)))
                 (setq state (alist-get state beyond-state-parents)))
            ))
@@ -131,7 +141,7 @@ Do NOT put blocking stuff here.")
   (cl-assert (symbolp state) "state %S should be a symbol" state)
   (let ((old-state beyond--buffer-active-state))
     (unless (eq state old-state)
-      (beyond-debug mode (message "Beyond switching from %S to %S in %s" old-state state (buffer-name)))
+      (beyond-debug 'mode "Beyond switching from %S to %S in %s" old-state state (buffer-name))
       ;; disable previous state
       (when old-state
         (beyond--state-set old-state nil)
@@ -143,12 +153,12 @@ Do NOT put blocking stuff here.")
       (setq beyond--buffer-active-state state)
       (beyond--state-set state t)
       (beyond--sanity-check)
-      (beyond-debug hook (message "beyond--switch-state: running %S" state))
+      (beyond-debug 'hook "beyond--switch-state: running %S" state)
       (run-hook-with-args 'beyond-state-switch-hook state old-state)
       (beyond--run-state-hook state)
       ))
   (beyond--sanity-check)
-  (beyond-debug mode (message "beyond-states: %S %S %S" beyond-command-state beyond-insertion-state (beyond--buffer-command-state))))
+  (beyond-debug 'mode "beyond--switch-state: beyond-states: %S %S %S" beyond-command-state beyond-insertion-state (beyond--buffer-command-state)))
 
 
 (defun beyond-initial-state ()
@@ -238,7 +248,7 @@ Functions are called with the state symbol as the only argument" state-name))
 
        ,(when minor-mode-body
          `(defun ,state (&optional mode-compat-arg-enabled)
-           (beyond-debug mode (message "body of %S" ',state))
+           (beyond-debug 'mode "body of %S" ',state)
            ,@minor-mode-body
            ))
 
@@ -295,7 +305,7 @@ Functions are called with the state symbol as the only argument" state-name))
                     ;; remove the mark set when entering insertion mode if cursor position didn't change
                     (when (= (mark t) (point))
                       ;;FIXME: for some reaons mark is still set
-                      (beyond-debug mark (message "popping mark"))
+                      (beyond-debug 'mark "popping mark")
                       (pop-mark))
  ))
 
@@ -396,7 +406,7 @@ previous cursor settings.
                                      (min (max l beyond-color-cursor-value-lightness-min) beyond-color-cursor-value-lightness-max))
 
                                ))
-                         (beyond-debug 'cursor (message "cursor-color %S %S %S" cursor-color state saturation-lightness))
+                         (beyond-debug 'cursor "cursor-color %S %S %S" cursor-color state saturation-lightness)
                          (if color
                              (apply #'beyond-color-hex-from-hsl (car (beyond-color-extract-hsl color)) saturation-lightness)
                            (apply #'beyond-color-for-string
@@ -407,10 +417,10 @@ previous cursor settings.
                                    saturation-lightness)
                                   ))
                          )))
-            (beyond-debug cursor (message "beyond-update-cursor %S %S in %s (on frame %s) with %S"
-                                          type color (buffer-name)
-                                          (frame-parameter nil 'width)
-                                          state))
+            (beyond-debug 'cursor "beyond-update-cursor %S %S in %s (on frame %s) with %S"
+                          type color (buffer-name)
+                          (frame-parameter nil 'width)
+                          state)
             (setq cursor-type (or type beyond-cursor-type-default))
             (set-cursor-color color))
           )))))
@@ -651,10 +661,12 @@ return a beyond state to switch to or nil."
         ;;   (push 'beyond/after-change-hook after-change-functions))
         (setq beyond--buffer-command-state (beyond--find-command-buffer-state))
         (beyond--switch-state
-         (beyond-initial-state)))
+         (beyond-initial-state))
+        (beyond-debug 'mode "enabled %S" beyond-mode))
     (setq cursor-type (car beyond--original-cursor))
     (set-frame-parameter nil 'cursor-color (cdr beyond--original-cursor))
-    (setq beyond--original-cursor (list cursor-type (frame-parameter nil 'cursor-color))))
+    (setq beyond--original-cursor (list cursor-type (frame-parameter nil 'cursor-color)))
+    (beyond-debug 'mode "disabled"))
   )
 
 ;; make modeline lighter update after each state switch
@@ -668,12 +680,11 @@ initialize `beyond-mode' from the globalized minor-mode
 `beyond-global-mode'.  It is called whenever beyond is enabled in a buffer
 for the first time or when beyond is active and the `major-mode' of
 the buffer changes."
-  (beyond-debug mode "beyond-global-mode %S" (buffer-name))
-  (unless beyond-mode
-    (beyond-mode 1)))
+  (beyond-debug 'mode "beyond-global-mode enable %S" (buffer-name))
+  (beyond-mode 1))
 
 ;;;###autoload (autoload 'beyond-global-mode "beyond" "Toggle beyond in all buffers" t)
-(define-globalized-minor-mode beyond-global-mode beyond-mode beyond-mode--initialize :group 'beyond)
+(define-globalized-minor-mode beyond-global-mode beyond-mode beyond-mode--initialize :predicate t :group 'beyond)
 
 
 (with-eval-after-load 'multiple-cursors
@@ -1424,7 +1435,7 @@ Return value is a list of the form (:rest REST . ARGS)."
 
 (defun beyond-insertion-state-exit-on-idle-action (buffer)
   (cl-check-type buffer buffer)
-  (beyond-debug hook (message "exit-on-idle action"))
+  (beyond-debug 'hook "exit-on-idle action")
   (when beyond-insertion-state
     (with-current-buffer buffer
       ;; for some reason boon-quit doesn't quit the state
@@ -1437,7 +1448,7 @@ Return value is a list of the form (:rest REST . ARGS)."
 (defun beyond-insertion-state-exit-on-idle ()
   ;; (when beyond-insertion-state-exit-on-idle-timer
   ;;   (cancel-timer beyond-insertion-state-exit-on-idle-timer))
-  (beyond-debug hook (message "exit-on-idle start"))
+  (beyond-debug 'hook "exit-on-idle start")
   (let ((buf (current-buffer)))
     ;; assume after 10 seconds that user forgot he's in insert state
     (if (sit-for 10)
