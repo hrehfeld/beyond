@@ -7,16 +7,22 @@
 (require 'beyond)
 (require 'org-convenience)
 
-(beyond-def-state beyond-org-mode-command-state "Beyond command state for `org-mode' buffers" "oCMD" beyond-command-state)
-(beyond-def-state beyond-org-mode-refile-state "Refile headlines in `org-mode' buffers" "oRFI" beyond-org-mode-command-state)
-;;(pp (macroexpand-1 '(beyond-def-state beyond-org-mode-command-state "Beyond command state for `org-mode' buffers" "CMD" beyond-command-state)))
+(beyond-def-state beyond-org-mode-command-state "Beyond command state for `org-mode' buffers" :lighter-string "oCMD" :parent-state beyond-command-state)
+(beyond-def-state beyond-org-mode-refile-state "Refile headlines in `org-mode' buffers" :lighter-string "oRFI" :parent-state beyond-org-mode-command-state)
 
 (add-to-list 'beyond-mode-command-state-alist
              '(org-mode . (beyond-org-mode-command-state beyond-command-state)))
 
-(beyond-def-state beyond-org-agenda-mode-command-state "Beyond command state for `org-agenda-mode' buffers" "oaCMD" beyond-command-state)
-;;(pp (macroexpand-1 '(beyond-def-state beyond-org-agenda-mode-command-state "Beyond command state for `org-agenda-mode' buffers" "CMD" beyond-command-state)))
-(add-to-list 'beyond-mode-command-state-alist '(org-agenda-mode . beyond-org-agenda-mode-command-state))
+(beyond-def-state beyond-org-agenda-mode-command-state "Beyond command state for `org-agenda-mode' buffers"
+                  :lighter-string "oaCMD"
+                  :parent-state beyond-command-state
+                  :parent-state-map beyond-org-mode-command-state-map
+                  :major-modes (org-agenda-mode))
+;; (pp (macroexpand-1 '(beyond-def-state beyond-org-agenda-mode-command-state "Beyond command state for `org-agenda-mode' buffers"
+;;                   :lighter-string "oaCMD"
+;;                   :parent-state beyond-command-state
+;;                   :parent-state-map beyond-org-mode-command-state-map
+;;                   :major-modes (org-agenda-mode))))
 
 (setq beyond-org-mode-easy-bindings
       `((:map beyond-org-mode-refile-state-map

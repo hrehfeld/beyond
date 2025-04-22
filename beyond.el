@@ -200,7 +200,8 @@ Do NOT put blocking stuff here.")
 
 (defvar beyond-state-parents nil)
 
-(cl-defmacro beyond-def-state (state doc lighter-string parent-state &optional parent-state-map &rest minor-mode-body)
+
+(cl-defmacro beyond-def-state (state doc &body minor-mode-body &key lighter-string parent-state parent-state-map major-modes &allow-other-keys)
   "`STATE' should be a symbol for the new state like `beyond-command-state'.
 
 `PARENT-STATE' is a symbol for a parent state or `nil'.
@@ -213,10 +214,27 @@ With `NO-VAR', don't create a state variable (mostly useful if
 state is a minor mode and creates a variable anyways).
 
 Do NOT use `minor-mode-body' for state transitions! It will cause
-havoc."
+havoc.
+
+With `MAJOR-MODES', set this state as the default state for the
+given major modes in `beyond-mode-command-state-alist'.
+"
   (cl-check-type state symbol)
   (cl-check-type parent-state (or null symbol))
-  (let* ((state-name (symbol-name state))
+  (let* ((minor-mode-body
+         (let (filtered-body)
+           (while minor-mode-body
+             (let ((next (pop minor-mode-body)))
+               (if (keywordp next)
+                   (if (member next '(:lighter-string :parent-state :parent-state-map :major-modes))
+                       (progn
+                         (unless minor-mode-body
+                           (error "Expected argument after keyword %S" next))
+                         (pop minor-mode-body))
+                     (error "Unexpected keyword %s" next))
+                 (push next filtered-body))))
+           (nreverse filtered-body)))
+         (state-name (symbol-name state))
          (state-map-name (concat state-name "-map"))
          (state-map (intern state-map-name))
          (parent-state-map (or parent-state-map
@@ -256,7 +274,12 @@ Functions are called with the state symbol as the only argument" state-name))
        ,@(when parent-state
            `((setq beyond-state-parents (cons '(,state . ,parent-state) (assq-delete-all ',state beyond-state-parents)))))
        ;; enable keymap
-       (add-to-list 'beyond-state-map-alist '(,state . ,state-map)))))
+       (add-to-list 'beyond-state-map-alist '(,state . ,state-map))
+
+       ,@(cl-loop
+          for major-mode in (if (listp major-modes) major-modes (list major-modes))
+          collect
+          `(add-to-list 'beyond-mode-command-state-alist '(,major-mode . ,state))))))
 
 ;;(add-to-list 'beyond-state-map-alist '(beyond-org-mode-command-state . beyond-command-state-map))
 ;;(setq beyond-state-map-alist nil)
@@ -275,9 +298,15 @@ Functions are called with the state symbol as the only argument" state-name))
     (set-keymap-parent map beyond-minimal-motion-state-map)
     map)
   "Base keymap that saves motion commands. Other special state maps inherit from this.")
-;; (pp (macroexpand-1 '(beyond-def-state beyond-command-state "Beyond command mode where keys aren't self-inserting but run commands." "CMD" nil beyond-motion-state-map)))
-(beyond-def-state beyond-command-state "Beyond command mode where keys aren't self-inserting but run commands instead." "CMD" nil beyond-motion-state-map)
-(beyond-def-state beyond-special-state "Beyond special mode where keys aren't self-inserting but run commands instead while mimicing the original special mode." "SPC" nil beyond-minimal-motion-state-map)
+;; (pp (macroexpand-1 '(beyond-def-state beyond-command-state "Beyond command mode where keys aren't self-inserting but run commands." "CMD" nil :parent-state-map beyond-motion-state-map)))
+(beyond-def-state beyond-command-state
+                  "Beyond command mode where keys aren't self-inserting but run commands instead."
+                  :lighter-string "CMD"
+                  :parent-state-map beyond-motion-state-map)
+(beyond-def-state beyond-special-state
+                  "Beyond special mode where keys aren't self-inserting but run commands instead while mimicing the original special mode."
+                  :lighter-string "SPC"
+                  :parent-state-map beyond-minimal-motion-state-map)
 
 (defun beyond--signal-point-read-only ()
   (when (and buffer-read-only (not (beyond-shell-mode-p)))
@@ -292,7 +321,9 @@ Functions are called with the state symbol as the only argument" state-name))
   )
 
 ;; insert state is the only state that actually has a mode
-(beyond-def-state beyond-insertion-state "Beyond insertion mode where keys self-insert. Generally behaves very similar to normal emacs." "INS" nil nil
+(beyond-def-state beyond-insertion-state
+                  "Beyond insertion mode where keys self-insert. Generally behaves very similar to normal emacs."
+                  :lighter-string "INS"
                   (if beyond-insertion-state
                       (progn
                         (beyond--signal-point-read-only)
