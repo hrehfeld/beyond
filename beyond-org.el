@@ -1,3 +1,8 @@
+;;; beyond-org.el --- Beyond mode bindings for org-mode  -*- lexical-binding: t; -*-
+;;; Commentary:
+
+;;; Code:
+
 (require 'org)
 (require 'beyond)
 (require 'org-convenience)
@@ -72,3 +77,4 @@
 (beyond-bind beyond-org-mode-easy-bindings)
 
 (provide 'beyond-org)
+;;; beyond-org.el ends here
