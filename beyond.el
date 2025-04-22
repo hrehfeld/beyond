@@ -615,7 +615,7 @@ return a beyond state to switch to or nil."
 (defun beyond--buffer-start-in-insertion-state? ()
   (beyond--find-buffer-state
      beyond-start-in-insertion-state?-selectors
-     (mapcar (lambda (mode) (cons mode t)) beyond-start-in-insertion-state?-modes) nil))
+     (mapcar (lambda (mode) (cons mode mode)) beyond-start-in-insertion-state?-modes) nil))
 
 
 ;;; Initialisation and activation
