@@ -19,7 +19,7 @@
 (defgroup beyond nil "Beyond" :group 'Editing)
 
 
-(defvar beyond-debug nil "A list of debug types.")
+(defvar beyond-debug nil "A list of debug types to show messages for.")
 (defmacro beyond-debug (type &rest body)
   ;;(message "beyond-debug %S %S %S" type (member type beyond-debug) beyond-debug)
   `(when (memq ',type beyond-debug)
@@ -566,7 +566,16 @@ return a beyond state to switch to or nil."
   :group 'beyond :type '(list symbol))
 
 (defun beyond--find-buffer-state (state-selectors mode-state-alist default)
-  "Return most appropriate state for current buffer."
+  "Return most appropriate state for current buffer.
+
+First, call each nullary function in `STATE-SELECTORS' and return result if non-nil,
+return that.
+
+Otherwise, check any of `local-minor-modes' against `MODE-STATE-ALIST' and return result if non-nil.
+
+Otherwise, check `major-mode' against `MODE-STATE-ALIST' and return result if non-nil.
+
+Last, return `DEFAULT'."
   (or (cl-loop for state-selector in state-selectors
                with state = nil
                do (setq state (funcall state-selector))
